@@ -121,7 +121,7 @@ export async function callPlanner(
     },
   );
   if (!response.ok) {
-    if (response.status === 403) {
+    if (response.status === 403 || response.status === 404) {
       const errorBody = (await response.json().catch(() => ({}))) as {
         error?: { message?: unknown };
       };
@@ -131,6 +131,13 @@ export async function callPlanner(
       )
         throw new Error(
           'OpenRouter requires 18+ age confirmation for this model. Complete it at openrouter.ai/settings/preferences, then retry.',
+        );
+      if (
+        typeof errorBody.error?.message === 'string' &&
+        errorBody.error.message.includes('Paid model training violation')
+      )
+        throw new Error(
+          'OpenRouter privacy settings exclude this Contributor model because it may use prompts and outputs for training. Review openrouter.ai/settings/privacy or choose another model.',
         );
     }
     throw new Error(
