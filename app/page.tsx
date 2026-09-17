@@ -31,6 +31,8 @@ import { createWorld, stepWorld } from '@/lib/reflex/world';
 import type { World } from '@/lib/reflex/types';
 import { browserRegistry, registerMissionTools } from '@/lib/reflex/webmcp';
 
+const INITIAL_DESTINATION_DISTANCE = 1400;
+
 export default function Home() {
   const [world, setWorld] = useState(() => createWorld());
   const [controller, setController] = useState(
@@ -198,20 +200,17 @@ export default function Home() {
     a.click();
     URL.revokeObjectURL(url);
   }
-  const stage = drone.complete
-    ? 4
-    : control.strategy.revision
-      ? 4
-      : control.planning
-        ? 3
-        : world.time >= 10
-          ? 2
-          : world.time >= 5
-            ? 1
-            : 0;
   const confidence = Math.round((control.decision?.confidence ?? 0) * 100),
     latest = events.at(-1),
-    escalations = events.filter((e) => e.escalated).length;
+    escalations = events.filter((e) => e.escalated).length,
+    distanceToDestination = Math.hypot(
+      world.destination.x - drone.position.x,
+      world.destination.y - drone.position.y,
+    ),
+    destinationProgress = Math.min(
+      100,
+      Math.max(0, (1 - distanceToDestination / INITIAL_DESTINATION_DISTANCE) * 100),
+    );
   return (
     <main>
       <header className="topbar">
@@ -305,13 +304,6 @@ export default function Home() {
               </strong>
             </div>
             <div>
-              <span>INTEGRITY</span>
-              <strong>
-                {drone.health}
-                <small>%</small>
-              </strong>
-            </div>
-            <div>
               <span>BATTERY</span>
               <strong>
                 {drone.battery.toFixed(0)}
@@ -321,12 +313,11 @@ export default function Home() {
             <div>
               <span>TO DESTINATION</span>
               <strong>
-                {Math.hypot(
-                  world.destination.x - drone.position.x,
-                  world.destination.y - drone.position.y,
-                ).toFixed(0)}{' '}
-                <small>m</small>
+                {distanceToDestination.toFixed(0)} <small>m</small>
               </strong>
+              <div className="dest-track">
+                <i style={{ width: `${destinationProgress}%` }} />
+              </div>
             </div>
           </div>
           <div className="transport">
@@ -492,30 +483,6 @@ export default function Home() {
           System 2: {control.plannerError}
         </div>
       )}
-      <section className="timeline">
-        <div className="timeline-title">
-          <span className="eyebrow">SCENARIO PROGRESSION</span>
-          <span>
-            {world.scenario === 'hero'
-              ? 'The unknown signal'
-              : `Seed ${world.seed}`}
-          </span>
-        </div>
-        <div className="stages">
-          {['Calm', 'Pressure', 'Ambiguity', 'Escalation', 'Execution'].map(
-            (s, i) => (
-              <div
-                key={s}
-                className={i === stage ? 'current' : i < stage ? 'passed' : ''}
-              >
-                <span>{String(i + 1).padStart(2, '0')}</span>
-                {s}
-                <i />
-              </div>
-            ),
-          )}
-        </div>
-      </section>
       <section className="lower-grid">
         <div className="telemetry">
           <div className="section-title">

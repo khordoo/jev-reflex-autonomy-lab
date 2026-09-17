@@ -368,7 +368,7 @@ canvas {
 }
 .flight-stats {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   padding: 22px 20px;
   border-top: 1px solid #24313d;
   background: #101a23;
@@ -396,6 +396,17 @@ canvas {
 }
 .flight-stats > div:first-child strong {
   font-size: 15px;
+}
+.dest-track {
+  height: 4px;
+  background: #2a3945;
+  margin-top: 11px;
+}
+.dest-track i {
+  display: block;
+  height: 4px;
+  background: #7fc7ff;
+  transition: width 0.2s;
 }
 small {
   color: #7f96a5;
@@ -583,6 +594,10 @@ button {
   border-color: #343348;
   background: linear-gradient(135deg, #1c1d30, #121b25);
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .system-two .system-title {
   color: #bcaff1;
@@ -599,6 +614,10 @@ button {
 .strategy {
   border-top: 1px solid #333345;
   padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
 }
 .strategy .eyebrow {
   font-size: 10px;
@@ -615,6 +634,8 @@ button {
   color: #969caf;
   line-height: 1.6;
   margin: 8px 0 15px;
+  height: 88px;
+  overflow-y: auto;
 }
 .planner-foot {
   display: flex;
@@ -667,57 +688,6 @@ button {
   color: #ff9286;
   border-color: #ff6f61;
   background: #321918ee;
-}
-.timeline {
-  display: flex;
-  padding: 24px 0;
-  border-bottom: 1px solid #26323d;
-  align-items: center;
-  gap: 40px;
-}
-.timeline-title {
-  min-width: 205px;
-}
-.timeline-title span {
-  display: block;
-  font-size: 14px;
-}
-.timeline-title .eyebrow {
-  font-size: 10px;
-}
-.stages {
-  display: flex;
-  flex: 1;
-  gap: 20px;
-}
-.stages > div {
-  flex: 1;
-  font-size: 13px;
-  color: #5f7584;
-  position: relative;
-  padding-bottom: 13px;
-}
-.stages span {
-  font-size: 10px;
-  margin-right: 9px;
-}
-.stages i {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #24323d;
-}
-.stages .current {
-  color: #b7f580;
-}
-.stages .current i,
-.stages .passed i {
-  background: #a9e877;
-}
-.stages .passed {
-  color: #a1b596;
 }
 .lower-grid {
   display: grid;
@@ -917,12 +887,6 @@ footer {
   .top-meta {
     display: none;
   }
-  .timeline {
-    display: block;
-  }
-  .stages {
-    margin-top: 20px;
-  }
   .settings {
     border-left: 0;
     padding: 20px 0;
@@ -965,7 +929,7 @@ footer {
     top: 16px;
   }
   .flight-stats {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 19px;
   }
   .flight-stats > div {
@@ -974,16 +938,6 @@ footer {
   }
   .flight-stats strong {
     font-size: 18px;
-  }
-  .stages {
-    gap: 8px;
-  }
-  .stages > div {
-    font-size: 10px;
-  }
-  .stages span {
-    display: block;
-    margin-bottom: 5px;
   }
   .table-scroll {
     overflow-x: auto;
