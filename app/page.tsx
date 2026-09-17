@@ -540,7 +540,9 @@ export default function Home() {
             step={1}
             onValueChange={(v) => setThreshold(Array.isArray(v) ? v[0] : v)}
           />
-          <p>Confidence below this gate requests a strategy.</p>
+          <p>
+            Low confidence or a newly detected unknown requests a strategy.
+          </p>
           <div className="setting-row">
             <label htmlFor="provider">Decision provider</label>
             <Select

@@ -2,6 +2,8 @@
 
 ## Latest verified live run (2026-09-17)
 
+After making newly detected unknowns a first-class escalation signal: mission complete in 70.88 simulated seconds with 100% integrity and zero collisions. Jev confidence was above the 30% gate when the unknown first appeared, but the novelty boundary correctly invoked Muse Spark anyway. Muse returned a cautious right-side bypass with 120 m clearance; Jev continued steering and reached the destination. This confirms the failed screenshot was caused by routing/cooldown logic, not insufficient Muse reasoning.
+
 After fixing the escalation boundary: mission complete in 22.05 simulated seconds; 77 real Jev decisions; median API latency 158 ms; confidence range 0.21–0.87; two completed Muse Spark plans; zero provider failures; zero collisions; 100% integrity. Raw trace: ignored `outputs/live-mission-40.json`. This is one successful run, not a reliability guarantee.
 
 The 40% gate now triggers strategic escalation without vetoing Jev's local actions. Low-confidence actions are labeled provisional. Before this fix, the drone coasted during planning and collided. Jev now receives current geometry and neutral per-action physics projections, not stale planner rationale. Ineffective braking/acceleration/scanning options are omitted. All real action selection remains Jev's; numeric ranking is confined to the explicitly labeled mock. Muse Spark uses low reasoning effort. Keys and account access are now verified. All 17 tests pass.

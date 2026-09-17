@@ -345,7 +345,7 @@ export function DecisionCharts({
           <span>
             {latestPlan?.latencyMs !== undefined
               ? `Last request: ${(latestPlan.latencyMs / 1000).toFixed(2)}s wall time`
-              : 'A request begins only below the confidence gate.'}
+              : 'Requests begin below the gate or on a newly detected unknown.'}
           </span>
         </div>
       </section>

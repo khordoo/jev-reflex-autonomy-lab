@@ -126,6 +126,7 @@ export type PlanningEvent = {
   latencyMs?: number;
   status: 'planning' | 'completed' | 'failed';
   triggerConfidence: number;
+  trigger?: 'confidence' | 'novel_unknown';
   strategyRevision?: number;
   error?: string;
 };
@@ -142,5 +143,6 @@ export type AgentControl = {
   history: Observation[];
   telemetry: TelemetryEvent[];
   planningEvents: PlanningEvent[];
+  escalatedUnknownIds: string[];
   plannerError?: string;
 };

@@ -155,6 +155,39 @@ test('controller escalates on confidence and does not escalate clear observation
   assert.equal(s.strategy.revision, 1);
   c.dispose();
 });
+test('a newly detected unknown bypasses confidence and planner cooldown', async () => {
+  const w = createWorld();
+  w.time = 12;
+  w.agents.drone_001.position = { x: 720, y: 360 };
+  const confidentProvider = {
+    name: 'confident-test',
+    mode: 'mock' as const,
+    async decide() {
+      return {
+        action: 'HOLD' as const,
+        confidence: 0.9,
+        probabilities: Object.fromEntries(
+          ACTIONS.map((action) => [
+            action,
+            action === 'HOLD' ? 0.9 : 0.1 / (ACTIONS.length - 1),
+          ]),
+        ) as Record<(typeof ACTIONS)[number], number>,
+      };
+    },
+  };
+  const c = new Controller(confidentProvider, new MockStrategyProvider(0));
+  c.threshold = 0.3;
+  c.state('drone_001').lastPlanAt = 12;
+  c.tick(w);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const state = c.state('drone_001');
+  assert.equal(state.telemetry[0].decision.confidence, 0.9);
+  assert.equal(state.telemetry[0].escalated, true);
+  assert.equal(state.telemetry[0].provisional, true);
+  assert.equal(state.planningEvents[0].trigger, 'novel_unknown');
+  assert.deepEqual(state.escalatedUnknownIds, ['unknown_05']);
+  c.dispose();
+});
 test('unconfigured Jev reports failure before any network request', async () => {
   const w = createWorld(),
     c = new Controller(new JevDecisionProvider(), new MockStrategyProvider(0));
