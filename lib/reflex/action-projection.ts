@@ -31,6 +31,17 @@ export function actionProjections(o: Observation) {
               : o.speed;
       const dx = Math.cos(angle) * speed,
         dy = Math.sin(angle) * speed;
+      const worldAngle = o.heading + angle;
+      const projectedX = o.position.x + Math.cos(worldAngle) * speed * 8;
+      const projectedY = o.position.y + Math.sin(worldAngle) * speed * 8;
+      const boundaryClearanceMetres = Math.round(
+        Math.min(
+          projectedX - o.bounds.minX,
+          o.bounds.maxX - projectedX,
+          projectedY - o.bounds.minY,
+          o.bounds.maxY - projectedY,
+        ),
+      );
       const contacts = o.detections.map((d) => {
         const p = d.relativePosition,
           vx = d.relativeVelocityVector.x + o.speed - dx,
@@ -52,6 +63,7 @@ export function actionProjections(o: Observation) {
         action,
         {
           speed,
+          boundaryClearanceMetres,
           destinationDistanceAfter2Seconds: Math.round(
             Math.hypot(
               o.destinationDistance * Math.cos(o.destinationBearing) - dx * 2,

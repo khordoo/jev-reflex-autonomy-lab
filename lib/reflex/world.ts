@@ -89,15 +89,20 @@ export function createWorld(
               activeAt: 0,
             },
           ]
-        : Array.from({ length: 18 }, (_, i) => ({
-            id: `object_${i}`,
-            position: { x: 380 + random() * 1050, y: 100 + random() * 520 },
-            velocity: { x: -8 + random() * 16, y: -8 + random() * 16 },
-            radius: 15 + random() * 28,
-            kind: i === 9 ? 'UNKNOWN' : 'ASTEROID',
-            signal: i === 9,
-            activeAt: 0,
-          })),
+        : Array.from({ length: 18 }, (_, i) => {
+            const unknown = i === 9;
+            return {
+              id: `object_${i}`,
+              position: { x: 380 + random() * 1050, y: 100 + random() * 520 },
+              velocity: unknown
+                ? { x: 0, y: 0 }
+                : { x: -8 + random() * 16, y: -8 + random() * 16 },
+              radius: unknown ? 72 : 15 + random() * 28,
+              kind: unknown ? ('UNKNOWN' as const) : ('ASTEROID' as const),
+              signal: unknown,
+              activeAt: unknown ? 24 : 0,
+            };
+          }),
   };
 }
 export function applyAction(world: World, agentId: string, action: Action) {
@@ -128,9 +133,43 @@ export function applyAction(world: World, agentId: string, action: Action) {
         d.scanned.push(o.id);
 }
 export function stepWorld(world: World, dt: number) {
+  const previousTime = world.time;
   world.time += dt;
   for (const o of world.objects)
     if (o.activeAt <= world.time) {
+      if (
+        world.scenario === 'seeded' &&
+        o.signal &&
+        previousTime < o.activeAt &&
+        world.time >= o.activeAt
+      ) {
+        const drone = Object.values(world.agents)[0];
+        const dx = world.destination.x - drone.position.x;
+        const dy = world.destination.y - drone.position.y;
+        const distance = Math.max(1, Math.hypot(dx, dy));
+        const forward = Math.min(260, distance * 0.6);
+        const offset = (((world.seed * 2654435761) >>> 0) % 81) - 40;
+        o.position = {
+          x: Math.max(
+            90,
+            Math.min(
+              1510,
+              drone.position.x +
+                (dx / distance) * forward -
+                (dy / distance) * offset,
+            ),
+          ),
+          y: Math.max(
+            90,
+            Math.min(
+              630,
+              drone.position.y +
+                (dy / distance) * forward +
+                (dx / distance) * offset,
+            ),
+          ),
+        };
+      }
       o.position.x += o.velocity.x * dt;
       o.position.y += o.velocity.y * dt;
     }

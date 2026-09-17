@@ -5,6 +5,9 @@ export function observe(world: World, agentId: string): Observation {
   return {
     observerId: agentId,
     time: world.time,
+    position: { ...d.position },
+    heading: d.heading,
+    bounds: { minX: 12, maxX: 1588, minY: 12, maxY: 708 },
     health: d.health,
     battery: d.battery,
     speed: Math.hypot(d.velocity.x, d.velocity.y),

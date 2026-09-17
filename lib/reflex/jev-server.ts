@@ -9,10 +9,12 @@ export function jevRequest(context: DecisionContext) {
     'TURN_LEFT',
     'TURN_RIGHT',
     'DECELERATE',
-  ].some((action) =>
-    projections[action]?.contacts.every(
-      (contact) => contact.surfaceClearanceMetres >= 0,
-    ),
+  ].some(
+    (action) =>
+      projections[action]?.boundaryClearanceMetres >= 0 &&
+      projections[action]?.contacts.every(
+        (contact) => contact.surfaceClearanceMetres >= 0,
+      ),
   );
   if (safeForwardActionExists) delete projections.RETREAT;
   const request = {
@@ -38,7 +40,7 @@ export function jevRequest(context: DecisionContext) {
         instructions: {
           task: 'Choose the single best next flight action.',
           priority_order: [
-            'Avoid projected collision.',
+            'Avoid projected collision and remain inside flight bounds.',
             'Follow the current strategy when it remains safe.',
             'Reduce destination distance.',
           ],
@@ -48,6 +50,8 @@ export function jevRequest(context: DecisionContext) {
               'Neutral constant-velocity outcomes for every available action; they are measurements, not recommendations.',
             collision_boundary:
               'Negative surfaceClearanceMetres predicts collision.',
+            flight_boundary:
+              'Negative boundaryClearanceMetres predicts leaving the flight area and must be rejected.',
           },
           unknown_policy: {
             condition: 'UNKNOWN contact lies near the projected path.',
@@ -69,7 +73,8 @@ export function jevRequest(context: DecisionContext) {
         criteria: {
           HOLD: {
             effect: 'Maintain current heading and speed.',
-            choose_when: 'Aligned with destination and all clearances are safe.',
+            choose_when:
+              'Aligned with destination and all clearances are safe.',
             reject_when: 'Any projected path has inadequate clearance.',
           },
           TURN_LEFT: {
@@ -99,13 +104,16 @@ export function jevRequest(context: DecisionContext) {
             effect: 'Decrease speed by 7 m/s, floored at 12 m/s.',
             choose_when:
               'No available turn has safe clearance or more reaction time is required.',
-            reject_when: 'A safe turn already avoids the blocker and makes progress.',
+            reject_when:
+              'A safe turn already avoids the blocker and makes progress.',
           },
           SCAN: {
-            effect: 'Classify detected contacts within 340 m without stopping motion.',
+            effect:
+              'Classify detected contacts within 340 m without stopping motion.',
             choose_when:
               'Strategy requests a scan and current projected motion remains safe.',
-            reject_when: 'An immediate maneuver is required to avoid collision.',
+            reject_when:
+              'An immediate maneuver is required to avoid collision.',
           },
           RETREAT: {
             effect: 'Reverse heading and set speed to 20 m/s.',

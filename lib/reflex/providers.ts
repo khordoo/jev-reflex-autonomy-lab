@@ -42,6 +42,7 @@ export function chooseMockDecision({
   const projections = actionProjections(o);
   const clearance = (a: string) =>
     Math.min(
+      projections[a].boundaryClearanceMetres,
       ...projections[a].contacts.map((c) => c.surfaceClearanceMetres),
       340,
     );

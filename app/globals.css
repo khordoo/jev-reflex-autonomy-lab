@@ -807,6 +807,23 @@ input {
 input {
   width: 90px;
 }
+.seed-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.seed-button {
+  color: #a9bdc9;
+  background: #111d27;
+  border: 1px solid #2b3e4c;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+.seed-button:hover {
+  color: #c6f89f;
+  border-color: #49633e;
+}
 .setting-foot {
   display: flex;
   gap: 22px;
@@ -1128,7 +1145,9 @@ footer {
 .lower-grid > .telemetry {
   min-width: 0;
 }
-.live-preset { width: 100%; }
+.live-preset {
+  width: 100%;
+}
 @media (max-width: 560px) {
   .signal-chart {
     padding: 15px 9px 12px;

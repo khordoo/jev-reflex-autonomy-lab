@@ -152,11 +152,12 @@ export default function Home() {
     scenario: World['scenario'] = world.scenario,
     provider = mode,
     planner = plannerMode,
+    nextSeed = seed,
   ) {
     controller.dispose();
     setRunning(false);
     setChartTime(0);
-    setWorld(createWorld(scenario, seed));
+    setWorld(createWorld(scenario, nextSeed));
     const next = new Controller(
       provider === 'mock'
         ? new MockDecisionProvider()
@@ -550,8 +551,8 @@ export default function Home() {
             onValueChange={(v) => setThreshold(Array.isArray(v) ? v[0] : v)}
           />
           <p>
-            Low confidence near a projected hazard, or a newly detected
-            unknown, requests a strategy.
+            Low confidence near a projected hazard, or a newly detected unknown,
+            requests a strategy.
           </p>
           <div className="setting-row">
             <label htmlFor="provider">Decision provider</label>
@@ -643,18 +644,36 @@ export default function Home() {
           </p>
           <div className="setting-row">
             <label htmlFor="seed">Scenario seed</label>
-            <input
-              id="seed"
-              type="number"
-              min="0"
-              max="999999"
-              value={seed}
-              onChange={(e) =>
-                setSeed(
-                  Math.max(0, Math.min(999999, Number(e.target.value) || 0)),
-                )
-              }
-            />
+            <div className="seed-controls">
+              <input
+                id="seed"
+                type="number"
+                min="0"
+                max="999999"
+                value={seed}
+                onChange={(e) =>
+                  setSeed(
+                    Math.max(0, Math.min(999999, Number(e.target.value) || 0)),
+                  )
+                }
+              />
+              <button
+                className="seed-button"
+                onClick={() => reset('seeded', mode, plannerMode, seed)}
+              >
+                Load
+              </button>
+              <button
+                className="seed-button"
+                onClick={() => {
+                  const nextSeed = Math.floor(Math.random() * 1_000_000);
+                  setSeed(nextSeed);
+                  reset('seeded', mode, plannerMode, nextSeed);
+                }}
+              >
+                Randomize
+              </button>
+            </div>
           </div>
           <div className="setting-foot">
             <span>{escalations} escalations</span>

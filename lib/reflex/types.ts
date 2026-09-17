@@ -55,6 +55,9 @@ export type Detection = {
 export type Observation = {
   observerId: string;
   time: number;
+  position: Vec;
+  heading: number;
+  bounds: { minX: number; maxX: number; minY: number; maxY: number };
   detections: Detection[];
   destinationDistance: number;
   destinationBearing: number;
