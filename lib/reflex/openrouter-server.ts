@@ -20,7 +20,7 @@ export function planningRequest(context: PlanningContext, model: string) {
         content:
           'Your guidance will be used for exactly one subsequent Jev decision, then discarded. Give guidance suitable for that next decision, not a multi-step scan-then-bypass sequence. ' +
           'You plan high-level strategy for a simulated autonomous drone. You do not steer individual frames or select immediate actions. Use only the supplied structured observations and recent decisions. Prioritize survival, then mission progress. If evidence is insufficient, choose a cautious bypass with a scan and adequate clearance. Do not claim to know what an unknown object is. Positive bearing is clockwise/right. Return the requested JSON strategy and a brief operational rationale; no additional prose. Avoid overriding measurement data with assumptions. ' +
-          'Field constraints: safetyDistance must be a finite number between 0 and 300 metres inclusive (use clearance proportional to observed obstacles; otherwise keep it small, e.g. 20-90). rationale must be a non-empty string of at most 600 characters, describing the reasoning for this single next decision. mode must be one of TRANSIT or CAUTIOUS_BYPASS; preferredSide must be one of left or right; scanRequired must be a boolean.',
+          'Field constraints: safetyDistance must be a finite number between 0 and 300 metres inclusive (use clearance proportional to observed obstacles; otherwise keep it small, e.g. 20-90). rationale must be a non-empty string of at most 900 characters, describing the reasoning for this single next decision. mode must be one of TRANSIT or CAUTIOUS_BYPASS; preferredSide must be one of left or right; scanRequired must be a boolean.',
       },
       {
         role: 'user',
@@ -97,6 +97,8 @@ export function parsePlan(body: unknown, context: PlanningContext): Strategy {
     agentId: context.agentId,
     revision: context.strategy.revision + 1,
   } as Strategy;
+  if (typeof strategy.rationale === 'string' && strategy.rationale.length > 900)
+    strategy.rationale = strategy.rationale.slice(0, 900);
   try {
     validateStrategy(strategy, context.agentId);
   } catch (error) {

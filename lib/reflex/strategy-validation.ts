@@ -22,8 +22,8 @@ export function validateStrategy(plan: Strategy, agentId: string) {
     if (typeof plan.rationale !== 'string')
       problems.push(`rationale is not a string`);
     else if (!plan.rationale.trim()) problems.push('rationale is empty');
-    else if (plan.rationale.length > 600)
-      problems.push(`rationale length ${plan.rationale.length} exceeds 600`);
+    else if (plan.rationale.length > 900)
+      problems.push(`rationale length ${plan.rationale.length} exceeds 900`);
     if (!Number.isInteger(plan.revision) || plan.revision < 0)
       problems.push(`revision = ${JSON.stringify(plan.revision)}`);
   }

@@ -610,6 +610,20 @@ test('OpenRouter requests the selected model and strict strategy schema, preserv
       ),
     /Invalid planner/,
   );
+  const clamped = parsePlan(
+    {
+      choices: [
+        {
+          finish_reason: 'stop',
+          message: {
+            content: JSON.stringify({ ...content, rationale: 'x'.repeat(1201) }),
+          },
+        },
+      ],
+    },
+    context,
+  );
+  assert.equal(clamped.rationale.length, 900);
 });
 test('System 2 context is bounded before transport and inside the model request', () => {
   const context = planningFixture();
@@ -716,5 +730,25 @@ test('controller records planner start and completion at actual simulation times
   assert.equal(s.planningEvents[0].status, 'completed');
   assert.equal(s.planningEvents[0].strategyRevision, 1);
   assert.equal(s.planning, false);
+  c.dispose();
+});
+test('planner failures are recorded in the failures list', async () => {
+  const w = createWorld();
+  const planner = {
+    name: 'controlled',
+    mode: 'mock' as const,
+    plan: () =>
+      Promise.reject(
+        new Error('Invalid planner strategy (rationale length 1201 exceeds 900)'),
+      ),
+  };
+  const c = new Controller(confidenceProvider(0.19), planner);
+  c.tick(w);
+  await new Promise((r) => setTimeout(r, 10));
+  const s = c.state('drone_001');
+  assert.equal(s.planningEvents[0].status, 'failed');
+  assert.equal(c.failures.length, 1);
+  assert.equal(c.failures[0].provider, 'controlled');
+  assert.match(c.failures[0].message, /rationale length 1201 exceeds 900/);
   c.dispose();
 });

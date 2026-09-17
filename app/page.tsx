@@ -304,13 +304,6 @@ export default function Home() {
               </strong>
             </div>
             <div>
-              <span>BATTERY</span>
-              <strong>
-                {drone.battery.toFixed(0)}
-                <small>%</small>
-              </strong>
-            </div>
-            <div>
               <span>TO DESTINATION</span>
               <strong>
                 {distanceToDestination.toFixed(0)} <small>m</small>

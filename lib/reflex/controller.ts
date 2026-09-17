@@ -227,6 +227,15 @@ export class Controller {
               event.error = s.plannerError;
               planningEvent.status = 'failed';
               planningEvent.error = s.plannerError;
+              this.failures.push({
+                timestamp: new Date().toISOString(),
+                agentId: id,
+                simulationTime: world.time,
+                provider: this.planner.name,
+                message: s.plannerError,
+                latencyMs: performance.now() - planStart,
+              });
+              if (this.failures.length > 200) this.failures.shift();
             }
           })
           .finally(() => {
