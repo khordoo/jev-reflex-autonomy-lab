@@ -275,6 +275,11 @@ export default function Home() {
                 <strong>MISSION COMPLETE · {drone.health}% INTEGRITY</strong>
               </div>
             )}
+            {drone.health <= 0 && (
+              <div className="escalation-banner failure">
+                <strong>MISSION FAILED · CRITICAL IMPACT</strong>
+              </div>
+            )}
           </div>
           <div className="flight-stats">
             <div>
@@ -420,7 +425,7 @@ export default function Home() {
           <div className={'bridge ' + (control.planning ? 'active' : '')}>
             <ArrowDown size={15} />
             {control.planning
-              ? 'ESCALATING FROM UNCERTAINTY'
+              ? 'SYSTEM 2 PLANNING · JEV STILL STEERING'
               : 'UNCERTAINTY TRIGGERS REASONING'}
           </div>
           <section
@@ -614,14 +619,14 @@ export default function Home() {
             onClick={() => {
               setMode('jev');
               setPlannerMode('openrouter');
-              setThreshold(40);
+              setThreshold(30);
               reset(world.scenario, 'jev', 'openrouter');
             }}
           >
             Prepare live mission
           </button>
           <p>
-            Sets Jev + Muse Spark and a 40% starting gate. Launch when ready;
+            Sets Jev + Muse Spark and a 30% starting gate. Launch when ready;
             the gate remains adjustable.
           </p>
           <div className="setting-row">

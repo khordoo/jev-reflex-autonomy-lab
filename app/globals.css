@@ -654,6 +654,11 @@ button {
   border-color: #b7f580;
   background: #19291eee;
 }
+.failure {
+  color: #ff9286;
+  border-color: #ff6f61;
+  background: #321918ee;
+}
 .timeline {
   display: flex;
   padding: 24px 0;

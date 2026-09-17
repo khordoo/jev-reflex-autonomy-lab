@@ -131,7 +131,7 @@ export class Controller {
       const executed = true;
       applyAction(world, id, decision.action);
       const escalated =
-        uncertain && !s.planning && world.time - s.lastPlanAt >= 6;
+        uncertain && !s.planning && world.time - s.lastPlanAt >= 15;
       const event: TelemetryEvent = {
         timestamp: new Date().toISOString(),
         simulationTime: world.time,

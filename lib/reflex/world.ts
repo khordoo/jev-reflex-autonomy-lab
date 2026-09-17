@@ -153,9 +153,12 @@ export function stepWorld(world: World, dt: number) {
         !d.collisions.includes(o.id)
       ) {
         d.collisions.push(o.id);
-        d.health = Math.max(0, d.health - 25);
+        const criticalImpact = o.radius >= 60;
+        d.health = criticalImpact ? 0 : Math.max(0, d.health - 25);
+        if (criticalImpact) d.velocity = { x: 0, y: 0 };
       }
     d.complete =
+      d.health > 0 &&
       Math.hypot(
         world.destination.x - d.position.x,
         world.destination.y - d.position.y,

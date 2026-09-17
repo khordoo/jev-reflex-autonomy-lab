@@ -269,6 +269,54 @@ test('confidence chart uses returned confidence and leaves gaps for provider fai
   assert.deepEqual(confidenceSeries([], [], 'drone_001'), []);
   c.dispose();
 });
+test('confidence chart changes color only while System 2 is actively planning', () => {
+  const event = (time: number) =>
+    ({
+      simulationTime: time,
+      agentId: 'drone_001',
+      decision: { confidence: 0.5, action: 'HOLD' },
+      threshold: 0.3,
+      observation: { detections: [] },
+      provider: 'jev',
+    }) as unknown as import('../lib/reflex/types').TelemetryEvent;
+  const plans = [
+    {
+      id: 'p1',
+      agentId: 'drone_001',
+      provider: 'planner',
+      mode: 'live',
+      startedAt: 2,
+      endedAt: 4,
+      status: 'completed',
+      triggerConfidence: 0.2,
+    },
+  ] as PlanningEvent[];
+  const data = confidenceSeries(
+    [event(1), event(3), event(5)],
+    [],
+    'drone_001',
+    plans,
+    5,
+  );
+  assert.equal(data[0].system1Confidence, 50);
+  assert.equal(data[0].planningConfidence, null);
+  assert.equal(data[1].system1Confidence, null);
+  assert.equal(data[1].planningConfidence, 50);
+  assert.equal(data[2].system1Confidence, 50);
+});
+test('a large-obstacle impact is terminal and cannot count as arrival', () => {
+  const w = createWorld();
+  const d = w.agents.drone_001;
+  const obstacle = w.objects.find((o) => o.id === 'unknown_05')!;
+  w.time = 10;
+  d.position = { ...obstacle.position };
+  d.velocity = { x: 65, y: 0 };
+  w.destination = { ...obstacle.position };
+  stepWorld(w, 0.01);
+  assert.equal(d.health, 0);
+  assert.equal(d.complete, false);
+  assert.deepEqual(d.velocity, { x: 0, y: 0 });
+});
 test('planner chart shows exact request intervals including pending requests', () => {
   const plans: PlanningEvent[] = [
     {

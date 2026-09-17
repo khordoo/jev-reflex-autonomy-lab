@@ -34,7 +34,13 @@ export function DecisionCharts({
   decisionMode: 'mock' | 'live';
   plannerMode: 'mock' | 'live';
 }) {
-  const confidence = confidenceSeries(events, failures, agentId);
+  const confidence = confidenceSeries(
+    events,
+    failures,
+    agentId,
+    planningEvents,
+    time,
+  );
   const activity = plannerSeries(planningEvents, time, agentId);
   const plans = planningEvents.filter((e) => e.agentId === agentId);
   const end = Math.max(30, Math.ceil(time / 10) * 10);
@@ -78,7 +84,11 @@ export function DecisionCharts({
         </div>
         <ChartContainer
           config={{
-            confidence: { label: 'Confidence', color: '#b7f580' },
+            system1Confidence: { label: 'Jev · solo', color: '#b7f580' },
+            planningConfidence: {
+              label: 'Jev · System 2 planning',
+              color: '#bba7f3',
+            },
             threshold: { label: 'Escalation gate', color: '#efb97b' },
           }}
           className="signal-chart-canvas"
@@ -118,7 +128,11 @@ export function DecisionCharts({
               labelFormatter={(v) => `Mission ${Number(v).toFixed(1)}s`}
               formatter={(v, name) => [
                 v == null ? 'No response' : `${Number(v).toFixed(1)}%`,
-                name === 'confidence' ? 'Confidence' : 'Gate at decision',
+                name === 'threshold'
+                  ? 'Gate at decision'
+                  : name === 'planningConfidence'
+                    ? 'Jev confidence · System 2 planning'
+                    : 'Jev confidence · solo',
               ]}
             />
             {!confidence.length && (
@@ -151,10 +165,20 @@ export function DecisionCharts({
             ))}
             <Area
               type="linear"
-              dataKey="confidence"
+              dataKey="system1Confidence"
               stroke="none"
               fill="#b7f580"
               fillOpacity={0.08}
+              isAnimationActive={false}
+              connectNulls={false}
+              tooltipType="none"
+            />
+            <Area
+              type="linear"
+              dataKey="planningConfidence"
+              stroke="none"
+              fill="#bba7f3"
+              fillOpacity={0.12}
               isAnimationActive={false}
               connectNulls={false}
               tooltipType="none"
@@ -172,8 +196,18 @@ export function DecisionCharts({
             />
             <Line
               type="linear"
-              dataKey="confidence"
+              dataKey="system1Confidence"
               stroke="#b7f580"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+              isAnimationActive={false}
+              connectNulls={false}
+            />
+            <Line
+              type="linear"
+              dataKey="planningConfidence"
+              stroke="#bba7f3"
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 4 }}
@@ -193,9 +227,9 @@ export function DecisionCharts({
           </ComposedChart>
         </ChartContainer>
         <div className="chart-legend">
-          <span className="lime">━ Confidence</span>
+          <span className="lime">━ Jev · solo reflex loop</span>
+          <span className="purple">━ Jev while System 2 plans</span>
           <span className="amber">┄ Escalation gate</span>
-          <span className="purple">● Planner requested</span>
         </div>
       </section>
       <section
