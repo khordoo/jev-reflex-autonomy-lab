@@ -39,14 +39,14 @@ export default function Home() {
   );
   const [running, setRunning] = useState(false),
     [sensors, setSensors] = useState(true),
-    [threshold, setThreshold] = useState(70),
+    [threshold, setThreshold] = useState(25),
     [mode, setMode] = useState('mock'),
     [plannerMode, setPlannerMode] = useState('mock'),
     [seed, setSeed] = useState(42);
   const [providerConfig, setProviderConfig] = useState({
     jevConfigured: false,
     plannerConfigured: false,
-    plannerModel: 'meta/muse-spark-1.3-contributor',
+    plannerModel: 'z-ai/glm-5.3',
   });
   const [configError, setConfigError] = useState(false);
   const [chartTime, setChartTime] = useState(0);
@@ -246,7 +246,7 @@ export default function Home() {
               : 'MIXED PROVIDERS'}
           <small>
             {mode === 'mock' ? 'Mock reflexes' : 'TypeSafe Jev'} ·{' '}
-            {plannerMode === 'mock' ? 'mock planner' : 'Muse Spark planner'}
+            {plannerMode === 'mock' ? 'mock planner' : 'GLM 5.3 planner'}
           </small>
         </div>
       </section>
@@ -425,7 +425,7 @@ export default function Home() {
             <div className="confidence-caption">
               <span>
                 {latest
-                  ? latest.provisional
+                  ? latest.escalated
                     ? 'Provisional action · strategy requested'
                     : 'Action executed'
                   : 'Waiting for launch'}
@@ -447,7 +447,7 @@ export default function Home() {
               <span className="chip">
                 {control.planning
                   ? 'PLANNING'
-                  : control.strategy.revision
+                  : control.guidancePending
                     ? 'STRATEGY SET'
                     : 'STANDBY'}
               </span>
@@ -473,7 +473,7 @@ export default function Home() {
               <span>
                 {plannerMode === 'mock'
                   ? 'Mock planner'
-                  : 'OpenRouter · Muse Spark'}
+                  : 'OpenRouter · GLM 5.3'}
               </span>
               <span>
                 REV {String(control.strategy.revision).padStart(2, '0')}
@@ -632,14 +632,14 @@ export default function Home() {
             onClick={() => {
               setMode('jev');
               setPlannerMode('openrouter');
-              setThreshold(30);
+              setThreshold(25);
               reset(world.scenario, 'jev', 'openrouter');
             }}
           >
             Prepare live mission
           </button>
           <p>
-            Sets Jev + Muse Spark and a 30% starting gate. Launch when ready;
+            Sets Jev + GLM 5.3 and a 25% starting gate. Launch when ready;
             the gate remains adjustable.
           </p>
           <div className="setting-row">

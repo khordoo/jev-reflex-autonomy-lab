@@ -46,6 +46,7 @@ export function jevRequest(context: DecisionContext) {
           ],
           projection_semantics: {
             horizon_seconds: 8,
+            arrival_cutoff: 'Each action projection ends at arrival if earlier than eight seconds. Hazards after arrival are irrelevant; the mission stops within 35 metres of the destination.',
             meaning:
               'Neutral constant-velocity outcomes for every available action; they are measurements, not recommendations.',
             collision_boundary:
@@ -60,6 +61,8 @@ export function jevRequest(context: DecisionContext) {
           },
           progress_policy:
             'Prefer forward motion toward the destination whenever any forward action is collision-free. Once clearance is adequate, prioritize destination progress. Do not keep braking when a safe turn makes progress.',
+          arrival_policy:
+            'Prefer an action with reachesDestination=true when its contacts and boundary clearances are safe. Do not turn away from a safe arrival to maximize clearance from a distant or receding object. Compare hazards only within each action projection horizon.',
           coordinate_convention: {
             positive_bearing: 'right / clockwise',
             negative_bearing: 'left / counter-clockwise',

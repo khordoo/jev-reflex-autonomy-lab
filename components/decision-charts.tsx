@@ -2,11 +2,11 @@
 import { memo } from 'react';
 import {
   Area,
-  AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   Line,
   ComposedChart,
-  ReferenceDot,
   ReferenceLine,
   Tooltip,
   XAxis,
@@ -16,7 +16,6 @@ import { ChartContainer } from '@/components/ui/chart';
 import {
   confidenceSeries,
   latencySeries,
-  plannerSeries,
 } from '@/lib/reflex/chart-data';
 import type { PlanningEvent, TelemetryEvent } from '@/lib/reflex/types';
 
@@ -48,9 +47,15 @@ export const DecisionCharts = memo(function DecisionCharts({
     planningEvents,
     time,
   );
-  const activity = plannerSeries(planningEvents, time, agentId);
   const latency = latencySeries(events, planningEvents, agentId, failures);
   const plans = planningEvents.filter((e) => e.agentId === agentId);
+  const advisoryResponses = plans
+    .filter((plan) => plan.endedAt !== undefined)
+    .map((plan) => ({
+      time: plan.endedAt!,
+      received: plan.status === 'completed' ? 1 : 0,
+      failed: plan.status === 'failed' ? 1 : 0,
+    }));
   const end = Math.max(30, Math.ceil(time / 10) * 10);
   const domain: [number, number] = [0, end];
   const unknownAt = events.find(
@@ -116,7 +121,7 @@ export const DecisionCharts = memo(function DecisionCharts({
           config={{
             system1Confidence: { label: 'Jev · solo', color: '#b7f580' },
             planningConfidence: {
-              label: 'Jev · System 2 planning',
+              label: 'Jev using System 2 guidance',
               color: '#bba7f3',
             },
           }}
@@ -158,7 +163,7 @@ export const DecisionCharts = memo(function DecisionCharts({
               formatter={(v, name) => [
                 v == null ? 'No response' : `${Number(v).toFixed(1)}%`,
                 name === 'planningConfidence'
-                    ? 'Jev confidence · System 2 planning'
+                    ? 'Jev confidence · using System 2 guidance'
                     : 'Jev confidence · solo',
               ]}
             />
@@ -175,14 +180,6 @@ export const DecisionCharts = memo(function DecisionCharts({
                 }}
               />
             )}
-            {plans.map((p) => (
-              <ReferenceLine
-                key={p.id}
-                x={p.startedAt}
-                stroke="#bba7f3"
-                strokeDasharray="3 5"
-              />
-            ))}
             <Area
               type="linear"
               dataKey="system1Confidence"
@@ -218,26 +215,16 @@ export const DecisionCharts = memo(function DecisionCharts({
               dataKey="planningConfidence"
               stroke="#bba7f3"
               strokeWidth={2}
-              dot={false}
+              dot={{ r: 3, fill: '#bba7f3', strokeWidth: 0 }}
               activeDot={{ r: 4 }}
               isAnimationActive={false}
               connectNulls={false}
             />
-            {plans.map((p) => (
-              <ReferenceDot
-                key={p.id}
-                x={p.startedAt}
-                y={p.triggerConfidence * 100}
-                r={4}
-                fill="#bba7f3"
-                stroke="#111923"
-              />
-            ))}
           </ComposedChart>
         </ChartContainer>
         <div className="chart-legend">
           <span className="lime">━ Jev · solo reflex loop</span>
-          <span className="purple">━ Jev while System 2 plans</span>
+          <span className="purple">● Jev using System 2 guidance</span>
         </div>
       </section>
       <section
@@ -263,7 +250,7 @@ export const DecisionCharts = memo(function DecisionCharts({
         <ChartContainer
           config={{
             system1LatencyMs: { label: 'Jev', color: '#b7f580' },
-            system2LatencyMs: { label: 'Muse Spark', color: '#bba7f3' },
+            system2LatencyMs: { label: 'GLM 5.3', color: '#bba7f3' },
             failureLatencyMs: { label: 'Provider failure', color: '#ff9286' },
           }}
           className="signal-chart-canvas"
@@ -304,7 +291,7 @@ export const DecisionCharts = memo(function DecisionCharts({
               formatter={(v, name) => [
                 formatLatency(Number(v)),
                 name === 'system2LatencyMs'
-                  ? 'Muse Spark'
+                  ? 'GLM 5.3'
                   : name === 'failureLatencyMs'
                     ? 'Provider failure'
                     : 'Jev',
@@ -358,24 +345,24 @@ export const DecisionCharts = memo(function DecisionCharts({
         </ChartContainer>
         <div className="chart-legend">
           <span className="lime">━ Jev decision latency</span>
-          <span className="purple">┃ Muse Spark strategy latency</span>
+          <span className="purple">┃ GLM 5.3 strategy latency</span>
           <span className="danger">● Provider failure</span>
           <span>Linear scale shows the full latency gap</span>
         </div>
       </section>
       <section
         className="signal-chart planner-activity-chart"
-        aria-label="System 2 planning activity history"
+        aria-label="System 2 advisory response history"
       >
         <div className="chart-heading">
           <div>
             <h3>
               <span className="chart-dot purple-bg" />
-              System 2 · planning activity
+              System 2 · advisory responses
             </h3>
             <p>
               {plannerMode === 'mock' ? 'Mock planner' : 'OpenRouter planner'} ·{' '}
-              {plans.length} requests
+              {advisoryResponses.length} responses from {plans.length} requests
             </p>
           </div>
           <strong className="purple small-value">
@@ -389,12 +376,15 @@ export const DecisionCharts = memo(function DecisionCharts({
           </strong>
         </div>
         <ChartContainer
-          config={{ active: { label: 'Planner active', color: '#bba7f3' } }}
+          config={{
+            received: { label: 'Advice received', color: '#bba7f3' },
+            failed: { label: 'Request failed', color: '#ff9286' },
+          }}
           className="signal-chart-canvas planner-chart"
-          aria-label="Actual planner request intervals aligned to confidence history"
+          aria-label="System 2 responses aligned to mission time"
         >
-          <AreaChart
-            data={activity}
+          <BarChart
+            data={advisoryResponses}
             syncId={`mission-${agentId}`}
             syncMethod="value"
             margin={{ top: 26, right: 18, bottom: 4, left: 0 }}
@@ -415,64 +405,43 @@ export const DecisionCharts = memo(function DecisionCharts({
               minTickGap={28}
             />
             <YAxis
-              domain={[0, 1.15]}
+              domain={[0, 1]}
               ticks={[0, 1]}
-              tickFormatter={(n) => (n ? 'On' : 'Off')}
+              tickFormatter={(n) => (n ? 'Received' : '')}
               tickLine={false}
               axisLine={false}
-              width={48}
+              width={64}
             />
             <Tooltip
               contentStyle={tooltipStyle}
               labelFormatter={(v) => `Mission ${Number(v).toFixed(1)}s`}
-              formatter={(v) => [
-                Number(v) ? 'Planning' : 'Standby',
-                'System 2',
+              formatter={(value, name) => [
+                Number(value)
+                  ? name === 'failed'
+                    ? 'Failed'
+                    : 'Advice received'
+                  : '',
+                name === 'failed' ? 'System 2 failure' : 'System 2 advice',
               ]}
             />
-            <Area
-              type="stepAfter"
-              dataKey="active"
-              stroke="#bba7f3"
-              strokeWidth={2}
+            <Bar
+              dataKey="received"
               fill="#bba7f3"
-              fillOpacity={0.18}
-              dot={false}
+              barSize={10}
               isAnimationActive={false}
             />
-            {plans.map((p) => (
-              <ReferenceLine
-                key={p.id}
-                x={p.startedAt}
-                stroke="#bba7f3"
-                strokeDasharray="3 5"
-              />
-            ))}
-            {plans
-              .filter((p) => p.endedAt !== undefined)
-              .map((p) => (
-                <ReferenceDot
-                  key={p.id}
-                  x={p.endedAt!}
-                  y={0}
-                  r={4}
-                  fill={p.status === 'failed' ? '#ff9286' : '#bba7f3'}
-                  stroke="#111923"
-                  label={{
-                    value:
-                      p.status === 'failed'
-                        ? 'Failed'
-                        : `Strategy r${p.strategyRevision}`,
-                    fill: p.status === 'failed' ? '#ff9286' : '#bba7f3',
-                    position: 'top',
-                    fontSize: 12,
-                  }}
-                />
-              ))}
-          </AreaChart>
+            <Bar
+              dataKey="failed"
+              fill="#ff9286"
+              barSize={10}
+              isAnimationActive={false}
+            />
+          </BarChart>
         </ChartContainer>
         <div className="chart-legend">
-          <span>Shared axis: mission time</span>
+          <span className="purple">▮ Advice received</span>
+          <span className="danger">▮ Request failed</span>
+          <span>Bars mark response arrival · shared mission-time axis</span>
           <span>
             {latestPlan?.latencyMs !== undefined
               ? `Last request: ${(latestPlan.latencyMs / 1000).toFixed(2)}s wall time`

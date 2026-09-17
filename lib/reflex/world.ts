@@ -1,4 +1,5 @@
 import type { Action, Drone, World } from './types';
+export const ARRIVAL_RADIUS = 35;
 export const wrapAngle = (n: number) => Math.atan2(Math.sin(n), Math.cos(n));
 export function seeded(seed: number) {
   let n = seed >>> 0;
@@ -201,7 +202,7 @@ export function stepWorld(world: World, dt: number) {
       Math.hypot(
         world.destination.x - d.position.x,
         world.destination.y - d.position.y,
-      ) < 35;
+      ) < ARRIVAL_RADIUS;
     const last = d.trail.at(-1);
     if (!last || Math.hypot(last.x - d.position.x, last.y - d.position.y) > 3) {
       d.trail.push({ ...d.position });

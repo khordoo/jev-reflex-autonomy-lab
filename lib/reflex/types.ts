@@ -107,6 +107,7 @@ export interface StrategyProvider {
   plan(context: PlanningContext, signal: AbortSignal): Promise<Strategy>;
 }
 export type TelemetryEvent = {
+  guidanceRevision?: number;
   timestamp: string;
   simulationTime: number;
   agentId: string;
@@ -139,6 +140,7 @@ export type PlanningEvent = {
   error?: string;
 };
 export type AgentControl = {
+  guidancePending: boolean;
   strategy: Strategy;
   observation?: Observation;
   decision?: Decision;

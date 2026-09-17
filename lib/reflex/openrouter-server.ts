@@ -1,8 +1,9 @@
 import type { PlanningContext, Strategy } from './types';
 import { validateStrategy } from './strategy-validation';
 import { compactPlanningContext } from './planning-context';
-export const DEFAULT_PLANNER_MODEL = 'meta/muse-spark-1.3-contributor';
-export const DEFAULT_PLANNER_FALLBACK_MODEL = 'z-ai/glm-5.3';
+export const DEFAULT_PLANNER_MODEL = 'z-ai/glm-5.3';
+export const DEFAULT_PLANNER_FALLBACK_MODEL =
+  'meta/muse-spark-1.3-contributor';
 // Official request contract: https://openrouter.ai/docs/api_reference/overview
 // and https://openrouter.ai/docs/guides/features/structured-outputs (2026-09-16).
 export function planningRequest(context: PlanningContext, model: string) {
@@ -17,6 +18,7 @@ export function planningRequest(context: PlanningContext, model: string) {
       {
         role: 'system',
         content:
+          'Your guidance will be used for exactly one subsequent Jev decision, then discarded. Give guidance suitable for that next decision, not a multi-step scan-then-bypass sequence. ' +
           'You plan high-level strategy for a simulated autonomous drone. You do not steer individual frames or select immediate actions. Use only the supplied structured observations and recent decisions. Prioritize survival, then mission progress. If evidence is insufficient, choose a cautious bypass with a scan and adequate clearance. Do not claim to know what an unknown object is. Positive bearing is clockwise/right. Return the requested JSON strategy and a brief operational rationale; no additional prose. Avoid overriding measurement data with assumptions.',
       },
       {

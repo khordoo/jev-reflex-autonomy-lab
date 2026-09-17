@@ -15,7 +15,7 @@ import { validateStrategy } from './strategy-validation';
 export { validateDecision } from './validation';
 export class Controller {
   agents: Record<string, AgentControl> = {};
-  threshold = 0.7;
+  threshold = 0.25;
   failures: {
     timestamp: string;
     agentId: string;
@@ -43,6 +43,7 @@ export class Controller {
   }
   state(id: string) {
     return (this.agents[id] ??= {
+      guidancePending: false,
       strategy: {
         agentId: id,
         mode: 'TRANSIT',
@@ -110,6 +111,7 @@ export class Controller {
     const observation = observe(world, id),
       strategy = { ...s.strategy },
       start = performance.now();
+    const guidanceRevision = s.guidancePending ? strategy.revision : undefined;
     const recentActions = s.telemetry
       .slice(-3)
       .map((event) => event.decision.action);
@@ -160,15 +162,27 @@ export class Controller {
           d.timeToClosestApproach > 0.1 &&
           d.closestApproach < d.estimatedSize + strategy.safetyDistance,
       );
-      const cooldownReady = world.time - s.lastPlanAt >= 15;
       const executed = true;
       applyAction(world, id, decision.action);
+      // Consume only the guidance used by this request; a newer plan may
+      // have arrived while this Jev decision was in flight.
+      if (guidanceRevision !== undefined && s.strategy.revision === guidanceRevision) {
+        s.guidancePending = false;
+        s.strategy = {
+          agentId: id, mode: 'TRANSIT', preferredSide: 'right',
+          safetyDistance: 45, scanRequired: false,
+          rationale: 'Reach the destination while preserving the drone.',
+          revision: guidanceRevision,
+        };
+      }
       const escalated =
         !s.planning &&
+        !s.guidancePending &&
         (novelUnknownIds.length > 0 ||
-          (uncertain && hazardous && cooldownReady));
+          (uncertain && hazardous));
       const needsStrategy = uncertain || novelUnknownIds.length > 0;
       const event: TelemetryEvent = {
+        guidanceRevision,
         timestamp: new Date().toISOString(),
         simulationTime: world.time,
         agentId: id,
@@ -223,6 +237,7 @@ export class Controller {
             if (plan.revision !== strategy.revision + 1)
               throw new Error('Invalid planner strategy revision');
             s.strategy = plan;
+            s.guidancePending = true;
             event.strategyAfter = { ...plan };
             event.system2LatencyMs = performance.now() - planStart;
             planningEvent.status = 'completed';

@@ -119,7 +119,7 @@ export class JevDecisionProvider implements DecisionProvider {
 export class OpenRouterStrategyProvider implements StrategyProvider {
   name: string;
   mode = 'live' as const;
-  constructor(model = 'meta/muse-spark-1.3-contributor') {
+  constructor(model = 'z-ai/glm-5.3') {
     this.name = model;
   }
   async plan(context: PlanningContext, signal: AbortSignal) {

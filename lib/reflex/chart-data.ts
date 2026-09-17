@@ -18,11 +18,12 @@ export function confidenceSeries(
       .map((e) => {
         const confidence = e.decision.confidence * 100;
         const planning = plannerActive(e.simulationTime);
+        const guided = e.guidanceRevision !== undefined;
         return {
           time: e.simulationTime,
           confidence,
-          system1Confidence: planning ? null : confidence,
-          planningConfidence: planning ? confidence : null,
+          system1Confidence: guided ? null : confidence,
+          planningConfidence: guided ? confidence : null,
           plannerActive: planning,
           threshold: e.threshold * 100,
           action: e.decision.action,
