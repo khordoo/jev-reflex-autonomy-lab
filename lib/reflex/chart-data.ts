@@ -61,3 +61,31 @@ export function plannerSeries(
   if (now > last.time) points.push({ time: now, active: last.active });
   return points;
 }
+
+export function latencySeries(
+  events: TelemetryEvent[],
+  planningEvents: PlanningEvent[],
+  agentId: string,
+) {
+  return [
+    ...events
+      .filter((event) => event.agentId === agentId)
+      .map((event) => ({
+        time: event.simulationTime,
+        system1LatencyMs: Math.max(1, event.latencyMs),
+        system2LatencyMs: null,
+        provider: event.provider,
+      })),
+    ...planningEvents
+      .filter(
+        (event) =>
+          event.agentId === agentId && event.latencyMs !== undefined,
+      )
+      .map((event) => ({
+        time: event.startedAt,
+        system1LatencyMs: null,
+        system2LatencyMs: Math.max(1, event.latencyMs!),
+        provider: event.provider,
+      })),
+  ].sort((a, b) => a.time - b.time);
+}

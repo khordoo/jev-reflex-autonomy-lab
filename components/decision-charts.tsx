@@ -12,7 +12,11 @@ import {
   YAxis,
 } from 'recharts';
 import { ChartContainer } from '@/components/ui/chart';
-import { confidenceSeries, plannerSeries } from '@/lib/reflex/chart-data';
+import {
+  confidenceSeries,
+  latencySeries,
+  plannerSeries,
+} from '@/lib/reflex/chart-data';
 import type { PlanningEvent, TelemetryEvent } from '@/lib/reflex/types';
 
 export function DecisionCharts({
@@ -42,6 +46,7 @@ export function DecisionCharts({
     time,
   );
   const activity = plannerSeries(planningEvents, time, agentId);
+  const latency = latencySeries(events, planningEvents, agentId);
   const plans = planningEvents.filter((e) => e.agentId === agentId);
   const end = Math.max(30, Math.ceil(time / 10) * 10);
   const domain: [number, number] = [0, end];
@@ -59,6 +64,8 @@ export function DecisionCharts({
     borderRadius: 6,
     fontSize: 12,
   };
+  const formatLatency = (value: number) =>
+    value < 1000 ? `${Math.round(value)} ms` : `${(value / 1000).toFixed(1)} s`;
   return (
     <div className="decision-charts">
       <section
@@ -230,6 +237,102 @@ export function DecisionCharts({
           <span className="lime">━ Jev · solo reflex loop</span>
           <span className="purple">━ Jev while System 2 plans</span>
           <span className="amber">┄ Escalation gate</span>
+        </div>
+      </section>
+      <section className="signal-chart" aria-label="Provider response latency history">
+        <div className="chart-heading">
+          <div>
+            <h3>
+              <span className="chart-dot lime-bg" />
+              Response latency
+            </h3>
+            <p>Wall-clock response time · logarithmic scale</p>
+          </div>
+          <strong className="lime small-value">
+            {recent ? formatLatency(recent.latencyMs) : '—'}
+          </strong>
+        </div>
+        <ChartContainer
+          config={{
+            system1LatencyMs: { label: 'Jev', color: '#b7f580' },
+            system2LatencyMs: { label: 'Muse Spark', color: '#bba7f3' },
+          }}
+          className="signal-chart-canvas"
+          aria-label="System 1 and System 2 response latency on a logarithmic scale"
+        >
+          <ComposedChart
+            data={latency}
+            syncId={`mission-${agentId}`}
+            syncMethod="value"
+            margin={{ top: 24, right: 18, bottom: 4, left: 0 }}
+            accessibilityLayer
+          >
+            <CartesianGrid
+              vertical={false}
+              stroke="#233442"
+              strokeDasharray="3 5"
+            />
+            <XAxis
+              dataKey="time"
+              type="number"
+              domain={domain}
+              tickFormatter={(n) => `${n}s`}
+              tickLine={false}
+              axisLine={false}
+              minTickGap={28}
+            />
+            <YAxis
+              scale="log"
+              domain={[1, 60000]}
+              ticks={[1, 10, 100, 1000, 10000]}
+              tickFormatter={(n) =>
+                Number(n) < 1000 ? `${n}ms` : `${Number(n) / 1000}s`
+              }
+              tickLine={false}
+              axisLine={false}
+              width={52}
+            />
+            <Tooltip
+              contentStyle={tooltipStyle}
+              labelFormatter={(v) => `Mission ${Number(v).toFixed(1)}s`}
+              formatter={(v, name) => [
+                formatLatency(Number(v)),
+                name === 'system2LatencyMs' ? 'Muse Spark' : 'Jev',
+              ]}
+            />
+            <Line
+              type="linear"
+              dataKey="system1LatencyMs"
+              stroke="#b7f580"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+              isAnimationActive={false}
+              connectNulls
+            />
+            <Line
+              type="linear"
+              dataKey="system2LatencyMs"
+              stroke="none"
+              dot={{ r: 5, fill: '#bba7f3', stroke: '#111923' }}
+              activeDot={{ r: 6, fill: '#bba7f3' }}
+              isAnimationActive={false}
+              connectNulls={false}
+            />
+            {plans.map((plan) => (
+              <ReferenceLine
+                key={plan.id}
+                x={plan.startedAt}
+                stroke="#bba7f3"
+                strokeDasharray="3 5"
+              />
+            ))}
+          </ComposedChart>
+        </ChartContainer>
+        <div className="chart-legend">
+          <span className="lime">━ Jev decision latency</span>
+          <span className="purple">● Muse Spark strategy latency</span>
+          <span>Log scale keeps milliseconds and seconds comparable</span>
         </div>
       </section>
       <section

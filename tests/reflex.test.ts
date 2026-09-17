@@ -15,8 +15,13 @@ import type {
   PlanningContext,
   PlanningEvent,
   Strategy,
+  TelemetryEvent,
 } from '../lib/reflex/types';
-import { confidenceSeries, plannerSeries } from '../lib/reflex/chart-data';
+import {
+  confidenceSeries,
+  latencySeries,
+  plannerSeries,
+} from '../lib/reflex/chart-data';
 import {
   callPlanner,
   parsePlan,
@@ -336,6 +341,31 @@ test('confidence chart changes color only while System 2 is actively planning', 
   assert.equal(data[1].system1Confidence, null);
   assert.equal(data[1].planningConfidence, 50);
   assert.equal(data[2].system1Confidence, 50);
+});
+test('latency chart separates Jev milliseconds from planner wall time', () => {
+  const event = {
+    agentId: 'drone_001',
+    simulationTime: 2,
+    latencyMs: 157,
+    provider: 'TypeSafe Jev',
+  } as TelemetryEvent;
+  const plan = {
+    id: 'p1',
+    agentId: 'drone_001',
+    provider: 'Muse Spark',
+    mode: 'live',
+    startedAt: 3,
+    endedAt: 6,
+    latencyMs: 14900,
+    status: 'completed',
+    triggerConfidence: 0.2,
+  } as PlanningEvent;
+  const data = latencySeries([event], [plan], 'drone_001');
+  assert.equal(data[0].system1LatencyMs, 157);
+  assert.equal(data[0].system2LatencyMs, null);
+  assert.equal(data[1].system1LatencyMs, null);
+  assert.equal(data[1].system2LatencyMs, 14900);
+  assert.deepEqual(latencySeries([], [], 'drone_001'), []);
 });
 test('a large-obstacle impact is terminal and cannot count as arrival', () => {
   const w = createWorld();
