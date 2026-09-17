@@ -1049,6 +1049,9 @@ footer {
 .purple {
   color: #bba7f3;
 }
+.danger {
+  color: #ff9286;
+}
 .signal-chart-canvas {
   width: 100%;
   height: 190px;

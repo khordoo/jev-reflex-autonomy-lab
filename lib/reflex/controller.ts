@@ -21,6 +21,7 @@ export class Controller {
     simulationTime: number;
     provider: string;
     message: string;
+    latencyMs: number;
   }[] = [];
   private requests = new Set<AbortController>();
   private disposed = false;
@@ -66,9 +67,11 @@ export class Controller {
       const s = this.state(id),
         d = world.agents[id];
       s.observation = observe(world, id);
+      const decisionCadence =
+        this.decisionProvider.mode === 'live' ? 0.5 : 0.28;
       if (
         !s.decisionPending &&
-        world.time - s.lastDecisionAt >= 0.28 &&
+        world.time - s.lastDecisionAt >= decisionCadence &&
         !d.complete &&
         d.health > 0 &&
         d.battery > 0
@@ -239,6 +242,7 @@ export class Controller {
           simulationTime: world.time,
           provider: this.decisionProvider.name,
           message: s.error,
+          latencyMs: performance.now() - start,
         });
         if (this.failures.length > 200) this.failures.shift();
       }

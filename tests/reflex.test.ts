@@ -193,6 +193,39 @@ test('a newly detected unknown bypasses confidence and planner cooldown', async 
   assert.deepEqual(state.escalatedUnknownIds, ['unknown_05']);
   c.dispose();
 });
+test('live decisions are throttled to two requests per simulated second', async () => {
+  let calls = 0;
+  const provider = {
+    name: 'live-test',
+    mode: 'live' as const,
+    async decide() {
+      calls++;
+      return {
+        action: 'HOLD' as const,
+        confidence: 0.9,
+        probabilities: Object.fromEntries(
+          ACTIONS.map((action) => [
+            action,
+            action === 'HOLD' ? 0.9 : 0.1 / (ACTIONS.length - 1),
+          ]),
+        ) as Record<(typeof ACTIONS)[number], number>,
+      };
+    },
+  };
+  const w = createWorld();
+  const c = new Controller(provider, new MockStrategyProvider(0));
+  c.tick(w);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  w.time = 0.3;
+  c.tick(w);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(calls, 1);
+  w.time = 0.5;
+  c.tick(w);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(calls, 2);
+  c.dispose();
+});
 test('unconfigured Jev reports failure before any network request', async () => {
   const w = createWorld(),
     c = new Controller(new JevDecisionProvider(), new MockStrategyProvider(0));

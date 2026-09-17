@@ -31,7 +31,11 @@ export function DecisionCharts({
 }: {
   events: TelemetryEvent[];
   planningEvents: PlanningEvent[];
-  failures: { simulationTime: number; agentId: string }[];
+  failures: {
+    simulationTime: number;
+    agentId: string;
+    latencyMs?: number;
+  }[];
   time: number;
   threshold: number;
   agentId: string;
@@ -46,7 +50,7 @@ export function DecisionCharts({
     time,
   );
   const activity = plannerSeries(planningEvents, time, agentId);
-  const latency = latencySeries(events, planningEvents, agentId);
+  const latency = latencySeries(events, planningEvents, agentId, failures);
   const plans = planningEvents.filter((e) => e.agentId === agentId);
   const end = Math.max(30, Math.ceil(time / 10) * 10);
   const domain: [number, number] = [0, end];
@@ -66,6 +70,26 @@ export function DecisionCharts({
   };
   const formatLatency = (value: number) =>
     value < 1000 ? `${Math.round(value)} ms` : `${(value / 1000).toFixed(1)} s`;
+  const jevLatencies = events
+    .filter((event) => event.agentId === agentId)
+    .map((event) => event.latencyMs)
+    .sort((a, b) => a - b);
+  const medianJevLatency = jevLatencies.length
+    ? jevLatencies[Math.floor(jevLatencies.length / 2)]
+    : undefined;
+  const maxLatency = Math.max(
+    1,
+    ...latency.flatMap((point) => [
+      point.system1LatencyMs ?? 0,
+      point.system2LatencyMs ?? 0,
+      point.failureLatencyMs ?? 0,
+    ]),
+  );
+  const latencyCeiling =
+    maxLatency <= 1000 ? 1000 : Math.ceil((maxLatency * 1.15) / 5000) * 5000;
+  const latencyTicks = [0, 0.25, 0.5, 0.75, 1].map(
+    (part) => part * latencyCeiling,
+  );
   return (
     <div className="decision-charts">
       <section
@@ -239,26 +263,34 @@ export function DecisionCharts({
           <span className="amber">┄ Escalation gate</span>
         </div>
       </section>
-      <section className="signal-chart" aria-label="Provider response latency history">
+      <section
+        className="signal-chart"
+        aria-label="Provider response latency history"
+      >
         <div className="chart-heading">
           <div>
             <h3>
               <span className="chart-dot lime-bg" />
-              Response latency
+              Response latency gap
             </h3>
-            <p>Wall-clock response time · logarithmic scale</p>
+            <p>Wall-clock response time · linear scale</p>
           </div>
-          <strong className="lime small-value">
-            {recent ? formatLatency(recent.latencyMs) : '—'}
+          <strong className="purple small-value">
+            {latestPlan?.latencyMs && medianJevLatency
+              ? `${Math.round(latestPlan.latencyMs / medianJevLatency)}× slower`
+              : recent
+                ? formatLatency(recent.latencyMs)
+                : '—'}
           </strong>
         </div>
         <ChartContainer
           config={{
             system1LatencyMs: { label: 'Jev', color: '#b7f580' },
             system2LatencyMs: { label: 'Muse Spark', color: '#bba7f3' },
+            failureLatencyMs: { label: 'Provider failure', color: '#ff9286' },
           }}
           className="signal-chart-canvas"
-          aria-label="System 1 and System 2 response latency on a logarithmic scale"
+          aria-label="System 1 and System 2 response latency on a linear scale"
         >
           <ComposedChart
             data={latency}
@@ -282,12 +314,9 @@ export function DecisionCharts({
               minTickGap={28}
             />
             <YAxis
-              scale="log"
-              domain={[1, 60000]}
-              ticks={[1, 10, 100, 1000, 10000]}
-              tickFormatter={(n) =>
-                Number(n) < 1000 ? `${n}ms` : `${Number(n) / 1000}s`
-              }
+              domain={[0, latencyCeiling]}
+              ticks={latencyTicks}
+              tickFormatter={(n) => formatLatency(Number(n))}
               tickLine={false}
               axisLine={false}
               width={52}
@@ -297,7 +326,11 @@ export function DecisionCharts({
               labelFormatter={(v) => `Mission ${Number(v).toFixed(1)}s`}
               formatter={(v, name) => [
                 formatLatency(Number(v)),
-                name === 'system2LatencyMs' ? 'Muse Spark' : 'Jev',
+                name === 'system2LatencyMs'
+                  ? 'Muse Spark'
+                  : name === 'failureLatencyMs'
+                    ? 'Provider failure'
+                    : 'Jev',
               ]}
             />
             <Line
@@ -319,10 +352,27 @@ export function DecisionCharts({
               isAnimationActive={false}
               connectNulls={false}
             />
+            <Line
+              type="linear"
+              dataKey="failureLatencyMs"
+              stroke="none"
+              dot={{ r: 5, fill: '#ff9286', stroke: '#111923' }}
+              activeDot={{ r: 6, fill: '#ff9286' }}
+              isAnimationActive={false}
+              connectNulls={false}
+            />
             {plans.map((plan) => (
               <ReferenceLine
                 key={plan.id}
-                x={plan.startedAt}
+                segment={
+                  plan.latencyMs === undefined
+                    ? undefined
+                    : [
+                        { x: plan.startedAt, y: 0 },
+                        { x: plan.startedAt, y: plan.latencyMs },
+                      ]
+                }
+                x={plan.latencyMs === undefined ? plan.startedAt : undefined}
                 stroke="#bba7f3"
                 strokeDasharray="3 5"
               />
@@ -331,8 +381,9 @@ export function DecisionCharts({
         </ChartContainer>
         <div className="chart-legend">
           <span className="lime">━ Jev decision latency</span>
-          <span className="purple">● Muse Spark strategy latency</span>
-          <span>Log scale keeps milliseconds and seconds comparable</span>
+          <span className="purple">┃ Muse Spark strategy latency</span>
+          <span className="danger">● Provider failure</span>
+          <span>Linear scale shows the full latency gap</span>
         </div>
       </section>
       <section

@@ -66,6 +66,11 @@ export function latencySeries(
   events: TelemetryEvent[],
   planningEvents: PlanningEvent[],
   agentId: string,
+  failures: {
+    simulationTime: number;
+    agentId: string;
+    latencyMs?: number;
+  }[] = [],
 ) {
   return [
     ...events
@@ -74,7 +79,17 @@ export function latencySeries(
         time: event.simulationTime,
         system1LatencyMs: Math.max(1, event.latencyMs),
         system2LatencyMs: null,
+        failureLatencyMs: null,
         provider: event.provider,
+      })),
+    ...failures
+      .filter((failure) => failure.agentId === agentId)
+      .map((failure) => ({
+        time: failure.simulationTime,
+        system1LatencyMs: null,
+        system2LatencyMs: null,
+        failureLatencyMs: Math.max(1, failure.latencyMs ?? 4000),
+        provider: 'Provider failure',
       })),
     ...planningEvents
       .filter(
@@ -85,6 +100,7 @@ export function latencySeries(
         time: event.startedAt,
         system1LatencyMs: null,
         system2LatencyMs: Math.max(1, event.latencyMs!),
+        failureLatencyMs: null,
         provider: event.provider,
       })),
   ].sort((a, b) => a.time - b.time);
