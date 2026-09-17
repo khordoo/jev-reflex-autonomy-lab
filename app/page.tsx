@@ -147,16 +147,16 @@ export default function Home() {
     controller.dispose();
     setRunning(false);
     setWorld(createWorld(scenario, seed));
-    setController(
-      new Controller(
-        provider === 'mock'
-          ? new MockDecisionProvider()
-          : new JevDecisionProvider(),
-        planner === 'mock'
-          ? new MockStrategyProvider()
-          : new OpenRouterStrategyProvider(providerConfig.plannerModel),
-      ),
+    const next = new Controller(
+      provider === 'mock'
+        ? new MockDecisionProvider()
+        : new JevDecisionProvider(),
+      planner === 'mock'
+        ? new MockStrategyProvider()
+        : new OpenRouterStrategyProvider(providerConfig.plannerModel),
     );
+    next.threshold = threshold / 100;
+    setController(next);
   }
   function download() {
     const blob = new Blob(

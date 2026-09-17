@@ -68,7 +68,7 @@ export class Controller {
         d = world.agents[id];
       s.observation = observe(world, id);
       const decisionCadence =
-        this.decisionProvider.mode === 'live' ? 0.35 : 0.28;
+        this.decisionProvider.mode === 'live' ? 0 : 0.28;
       if (
         !s.decisionPending &&
         world.time - s.lastDecisionAt >= decisionCadence &&
