@@ -68,7 +68,7 @@ export class Controller {
         d = world.agents[id];
       s.observation = observe(world, id);
       const decisionCadence =
-        this.decisionProvider.mode === 'live' ? 0.5 : 0.28;
+        this.decisionProvider.mode === 'live' ? 0.35 : 0.28;
       if (
         !s.decisionPending &&
         world.time - s.lastDecisionAt >= decisionCadence &&
@@ -109,17 +109,31 @@ export class Controller {
     const observation = observe(world, id),
       strategy = { ...s.strategy },
       start = performance.now();
+    const recentActions = s.telemetry
+      .slice(-3)
+      .map((event) => event.decision.action);
+    const previousAction = recentActions.at(-1) ?? null;
+    let sameActionStreak = 0;
+    for (let index = recentActions.length - 1; index >= 0; index--) {
+      if (recentActions[index] !== previousAction) break;
+      sameActionStreak++;
+    }
     const context = {
       agentId: id,
       observation,
       strategy,
       mission: 'Reach destination while preserving the drone.',
       actions: ACTIONS,
+      controlMemory: {
+        recentActions,
+        previousAction,
+        sameActionStreak,
+      },
     };
     try {
       const decision = await this.bounded(
         (signal) => this.decisionProvider.decide(context, signal),
-        4000,
+        6000,
       );
       if (this.disposed || generation !== this.generation) return;
       validateDecision(decision);
@@ -235,7 +249,7 @@ export class Controller {
         s.error = error instanceof Error ? error.message : 'Provider failed';
         this.failuresByAgent[id] = (this.failuresByAgent[id] || 0) + 1;
         s.lastDecisionAt =
-          world.time + Math.min(30, 2 ** this.failuresByAgent[id]);
+          world.time + Math.min(3, 0.5 * this.failuresByAgent[id]);
         this.failures.push({
           timestamp: new Date().toISOString(),
           agentId: id,
@@ -245,6 +259,11 @@ export class Controller {
           latencyMs: performance.now() - start,
         });
         if (this.failures.length > 200) this.failures.shift();
+        // Auto-dismiss the UI error banner after a short delay so transient
+        // failures don't leave a persistent scary message during the demo.
+        setTimeout(() => {
+          if (!this.disposed && s.error) s.error = undefined;
+        }, 1500);
       }
     } finally {
       s.decisionPending = false;

@@ -83,6 +83,11 @@ export type DecisionContext = {
   strategy: Strategy;
   mission: string;
   actions: readonly Action[];
+  controlMemory?: {
+    recentActions: Action[];
+    previousAction: Action | null;
+    sameActionStreak: number;
+  };
 };
 export type PlanningContext = DecisionContext & {
   observations: Observation[];

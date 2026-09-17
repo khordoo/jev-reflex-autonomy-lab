@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     const result = await callJev(
       context,
       key,
-      AbortSignal.any([request.signal, AbortSignal.timeout(3500)]),
+      AbortSignal.any([request.signal, AbortSignal.timeout(5000)]),
     );
     return Response.json(result, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {

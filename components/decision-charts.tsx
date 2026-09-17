@@ -264,7 +264,7 @@ export function DecisionCharts({
         </div>
       </section>
       <section
-        className="signal-chart"
+        className="signal-chart latency-chart"
         aria-label="Provider response latency history"
       >
         <div className="chart-heading">
@@ -387,7 +387,7 @@ export function DecisionCharts({
         </div>
       </section>
       <section
-        className="signal-chart"
+        className="signal-chart planner-activity-chart"
         aria-label="System 2 planning activity history"
       >
         <div className="chart-heading">

@@ -649,6 +649,15 @@ button {
   color: #c0adc9;
   margin-top: 7px;
 }
+.planning-banner {
+  top: 18px;
+  right: 18px;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  min-width: 280px;
+  padding: 12px 16px;
+}
 .success {
   color: #b7f580;
   border-color: #b7f580;
@@ -998,6 +1007,15 @@ footer {
 .decision-charts {
   display: grid;
   gap: 16px;
+}
+.planner-activity-chart {
+  order: 2;
+}
+.latency-chart {
+  order: 3;
+}
+.chart-empty {
+  order: 4;
 }
 .signal-chart {
   border: 1px solid #263946;

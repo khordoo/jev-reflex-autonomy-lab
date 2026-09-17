@@ -263,7 +263,7 @@ export default function Home() {
               <span>⌁ SENSOR LINK</span>
             </div>
             {control.planning && (
-              <div className="escalation-banner">
+              <div className="escalation-banner planning-banner">
                 <div>
                   <strong>REFLEX UNCERTAIN → SYSTEM 2</strong>
                   <span>Planning from recent observations</span>

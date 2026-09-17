@@ -4,6 +4,17 @@ import { actionProjections } from './action-projection';
 // Verified 2026-09-16: https://docs.typesafe.ai/introduction/quickstart and /api.
 export function jevRequest(context: DecisionContext) {
   const projections = actionProjections(context.observation);
+  const safeForwardActionExists = [
+    'HOLD',
+    'TURN_LEFT',
+    'TURN_RIGHT',
+    'DECELERATE',
+  ].some((action) =>
+    projections[action]?.contacts.every(
+      (contact) => contact.surfaceClearanceMetres >= 0,
+    ),
+  );
+  if (safeForwardActionExists) delete projections.RETREAT;
   const request = {
     model: 'jev-latest',
     state: {
@@ -11,6 +22,7 @@ export function jevRequest(context: DecisionContext) {
       mission: context.mission,
       observation: context.observation,
       actionProjections: projections,
+      controlMemory: context.controlMemory,
       strategy: {
         mode: context.strategy.mode,
         preferredSide: context.strategy.preferredSide,
@@ -23,18 +35,85 @@ export function jevRequest(context: DecisionContext) {
     questions: {
       action: {
         type: 'choice',
-        instructions:
-          'Choose the best next flight action. actionProjections gives neutral 8-second constant-velocity physics predictions for EVERY available action, not recommendations. Negative surfaceClearanceMetres means collision. An UNKNOWN near the projected path is safety-critical regardless of your confidence: immediately choose the turn with the best positive clearance, or DECELERATE if neither turn clears it; do not wait for a strategy update. Prefer a maneuver that avoids collision while reducing destinationDistanceAfter2Seconds. Once clearance is adequate, prioritize destination progress over maximizing clearance. Never keep braking if a turn avoids the obstacle and makes progress. Scan unknown objects when strategy requests it and projected motion permits. Positive destinationBearing is RIGHT; negative is LEFT. preferredSide is only a bypass tie-breaker, not a permanent turn command. Choose using current observations, not past locations.',
+        instructions: {
+          task: 'Choose the single best next flight action.',
+          priority_order: [
+            'Avoid projected collision.',
+            'Follow the current strategy when it remains safe.',
+            'Reduce destination distance.',
+          ],
+          projection_semantics: {
+            horizon_seconds: 8,
+            meaning:
+              'Neutral constant-velocity outcomes for every available action; they are measurements, not recommendations.',
+            collision_boundary:
+              'Negative surfaceClearanceMetres predicts collision.',
+          },
+          unknown_policy: {
+            condition: 'UNKNOWN contact lies near the projected path.',
+            response:
+              'Treat as safety-critical regardless of confidence. Choose the turn with the best positive clearance, or DECELERATE if neither turn clears it. Do not wait for strategy.',
+          },
+          progress_policy:
+            'Prefer forward motion toward the destination whenever any forward action is collision-free. Once clearance is adequate, prioritize destination progress. Do not keep braking when a safe turn makes progress.',
+          coordinate_convention: {
+            positive_bearing: 'right / clockwise',
+            negative_bearing: 'left / counter-clockwise',
+          },
+          strategy_scope:
+            'preferredSide breaks bypass ties only; it is not a permanent turn command.',
+          evidence_scope: 'Use the current observation, not past locations.',
+          control_continuity:
+            'Use controlMemory to avoid immediately reversing a recent turn unless the opposite action materially improves safety or is required to realign with the destination.',
+        },
         criteria: {
-          HOLD: 'Maintain motion when aligned with destination and clearance is adequate.',
-          TURN_LEFT:
-            'Turn left 0.22 radians: toward a NEGATIVE destinationBearing, or to pass left of an actual blocking object. Do not turn left toward a target on the right.',
-          TURN_RIGHT:
-            'Turn right 0.22 radians: toward a POSITIVE destinationBearing, or to pass right of an actual blocking object. Do not turn right toward a target on the left.',
-          ACCELERATE: 'Increase speed by 5 m/s, maximum 65.',
-          DECELERATE: 'Decrease speed by 7 m/s, minimum 12.',
-          SCAN: 'Classify detected objects within 340 metres, preserving motion.',
-          RETREAT: 'Reverse heading and set speed to 20 m/s.',
+          HOLD: {
+            effect: 'Maintain current heading and speed.',
+            choose_when: 'Aligned with destination and all clearances are safe.',
+            reject_when: 'Any projected path has inadequate clearance.',
+          },
+          TURN_LEFT: {
+            effect: 'Turn left by 0.22 radians.',
+            choose_when: [
+              'destinationBearing is negative and the route is clear',
+              'passing left gives the best safe clearance around a blocker',
+            ],
+            reject_when:
+              'The target is right and turning left does not improve obstacle clearance.',
+          },
+          TURN_RIGHT: {
+            effect: 'Turn right by 0.22 radians.',
+            choose_when: [
+              'destinationBearing is positive and the route is clear',
+              'passing right gives the best safe clearance around a blocker',
+            ],
+            reject_when:
+              'The target is left and turning right does not improve obstacle clearance.',
+          },
+          ACCELERATE: {
+            effect: 'Increase speed by 5 m/s, capped at 65 m/s.',
+            choose_when: 'Route is clear and added speed improves progress.',
+            reject_when: 'Added speed reduces safety margin.',
+          },
+          DECELERATE: {
+            effect: 'Decrease speed by 7 m/s, floored at 12 m/s.',
+            choose_when:
+              'No available turn has safe clearance or more reaction time is required.',
+            reject_when: 'A safe turn already avoids the blocker and makes progress.',
+          },
+          SCAN: {
+            effect: 'Classify detected contacts within 340 m without stopping motion.',
+            choose_when:
+              'Strategy requests a scan and current projected motion remains safe.',
+            reject_when: 'An immediate maneuver is required to avoid collision.',
+          },
+          RETREAT: {
+            effect: 'Reverse heading and set speed to 20 m/s.',
+            choose_when:
+              'Every available forward action predicts collision; use only as an emergency escape.',
+            reject_when:
+              'HOLD, TURN_LEFT, TURN_RIGHT, or DECELERATE is collision-free.',
+          },
         },
       },
     },
