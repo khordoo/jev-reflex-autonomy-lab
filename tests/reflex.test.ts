@@ -79,7 +79,7 @@ test('sensors measure geometry without mutating world or prescribing an action',
   assert.equal(o.detections[0].relativeBearing, 0);
   assert.ok(o.detections[0].closestApproach < 0.001);
   assert.ok(
-    Math.abs(o.detections[0].timeToClosestApproach! - 100 / 39) < 0.001,
+    Math.abs(o.detections[0].timeToClosestApproach! - 100 / 52) < 0.001,
   );
   assert.deepEqual(w, before);
   assert.equal('action' in o, false);

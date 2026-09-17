@@ -22,7 +22,7 @@ export function createWorld(
       drone_001: {
         id: 'drone_001',
         position: { x: 100, y: 360 },
-        velocity: { x: 39, y: 0 },
+        velocity: { x: 52, y: 0 },
         heading: 0,
         health: 100,
         battery: 100,
@@ -112,11 +112,11 @@ export function applyAction(world: World, agentId: string, action: Action) {
   let speed = Math.hypot(d.velocity.x, d.velocity.y);
   if (action === 'TURN_LEFT') d.heading -= 0.22;
   if (action === 'TURN_RIGHT') d.heading += 0.22;
-  if (action === 'ACCELERATE') speed = Math.min(65, speed + 5);
-  if (action === 'DECELERATE') speed = Math.max(12, speed - 7);
+  if (action === 'ACCELERATE') speed = Math.min(90, speed + 6);
+  if (action === 'DECELERATE') speed = Math.max(16, speed - 8);
   if (action === 'RETREAT') {
     d.heading += Math.PI;
-    speed = 20;
+    speed = 26;
   }
   d.heading = wrapAngle(d.heading);
   d.velocity = {
