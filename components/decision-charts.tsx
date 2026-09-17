@@ -2,8 +2,6 @@
 import { memo } from 'react';
 import {
   Area,
-  Bar,
-  BarChart,
   CartesianGrid,
   Line,
   ComposedChart,
@@ -49,15 +47,32 @@ export const DecisionCharts = memo(function DecisionCharts({
   );
   const latency = latencySeries(events, planningEvents, agentId, failures);
   const plans = planningEvents.filter((e) => e.agentId === agentId);
-  const advisoryResponses = plans
-    .filter((plan) => plan.endedAt !== undefined)
-    .map((plan) => ({
-      time: plan.endedAt!,
-      received: plan.status === 'completed' ? 1 : 0,
-      failed: plan.status === 'failed' ? 1 : 0,
-    }));
   const end = Math.max(30, Math.ceil(time / 10) * 10);
   const domain: [number, number] = [0, end];
+  const responses = plans.filter((plan) => plan.endedAt !== undefined);
+  const bumpWidth = end * 0.004;
+  const bumpHeight = 0.14;
+  const system2Pulses: { time: number; call: number }[] = [
+    { time: 0, call: 0 },
+    ...responses.flatMap((plan) => {
+      const at = plan.endedAt!,
+        start = Math.max(0, at - bumpWidth),
+        stop = Math.min(end, at + bumpWidth);
+      return [
+        { time: start, call: 0 },
+        { time: start, call: bumpHeight },
+        { time: stop, call: bumpHeight },
+        { time: stop, call: 0 },
+      ];
+    }),
+    {
+      time: Math.min(
+        end,
+        Math.max(time, (responses.at(-1)?.endedAt ?? 0) + bumpWidth),
+      ),
+      call: 0,
+    },
+  ].sort((a, b) => a.time - b.time);
   const unknownAt = events.find(
     (e) =>
       e.agentId === agentId &&
@@ -89,11 +104,39 @@ export const DecisionCharts = memo(function DecisionCharts({
       point.failureLatencyMs ?? 0,
     ]),
   );
-  const latencyCeiling =
-    maxLatency <= 1000 ? 1000 : Math.ceil((maxLatency * 1.15) / 5000) * 5000;
-  const latencyTicks = [0, 0.25, 0.5, 0.75, 1].map(
-    (part) => part * latencyCeiling,
+  const latencyValues = latency.flatMap((point) =>
+    [
+      point.system1LatencyMs,
+      point.system2LatencyMs,
+      point.failureLatencyMs,
+    ].filter((value): value is number => value != null),
   );
+  const latencyMin = latencyValues.length ? Math.min(...latencyValues) : 0;
+  const latencyFloor = Math.max(1, latencyMin - 20);
+  const niceCeil = (value: number) => {
+    const magnitude = 10 ** Math.floor(Math.log10(value));
+    return (
+      [1, 2, 5, 10].find((mult) => mult * magnitude >= value)! * magnitude
+    );
+  };
+  const latencyCeiling = Math.max(
+    100,
+    niceCeil(Math.max(latencyFloor * 1.5, maxLatency * 1.1)),
+  );
+  const latencyTicks: number[] = [latencyFloor];
+  for (
+    let magnitude = 10 ** Math.floor(Math.log10(latencyFloor));
+    magnitude <= latencyCeiling;
+    magnitude *= 10
+  ) {
+    for (const mult of [1, 2, 5]) {
+      const tick = magnitude * mult;
+      if (tick > latencyFloor && tick <= latencyCeiling) {
+        latencyTicks.push(tick);
+      }
+    }
+  }
+  latencyTicks.sort((a, b) => a - b);
   return (
     <div className="decision-charts">
       <section
@@ -157,6 +200,7 @@ export const DecisionCharts = memo(function DecisionCharts({
               axisLine={false}
               width={48}
             />
+            <YAxis yAxisId="system2" domain={[0, 1]} hide />
             <Tooltip
               contentStyle={tooltipStyle}
               labelFormatter={(v) => `Mission ${Number(v).toFixed(1)}s`}
@@ -215,16 +259,32 @@ export const DecisionCharts = memo(function DecisionCharts({
               dataKey="planningConfidence"
               stroke="#bba7f3"
               strokeWidth={2}
-              dot={{ r: 3, fill: '#bba7f3', strokeWidth: 0 }}
+              dot={false}
               activeDot={{ r: 4 }}
               isAnimationActive={false}
               connectNulls={false}
+            />
+            <Line
+              yAxisId="system2"
+              type="stepAfter"
+              dataKey="call"
+              data={system2Pulses}
+              stroke="#bba7f3"
+              strokeWidth={2}
+              strokeDasharray="2 3"
+              dot={false}
+              activeDot={false}
+              isAnimationActive={false}
+              tooltipType="none"
             />
           </ComposedChart>
         </ChartContainer>
         <div className="chart-legend">
           <span className="lime">━ Jev · solo reflex loop</span>
-          <span className="purple">● Jev using System 2 guidance</span>
+          <span className="purple">━ Jev using System 2 guidance</span>
+          <span className="purple">
+            ┄ System 2 call · {plannerMode === 'mock' ? 'mock' : 'OpenRouter'}
+          </span>
         </div>
       </section>
       <section
@@ -237,7 +297,7 @@ export const DecisionCharts = memo(function DecisionCharts({
               <span className="chart-dot lime-bg" />
               Response latency gap
             </h3>
-            <p>Wall-clock response time · linear scale</p>
+            <p>Wall-clock response time · log scale</p>
           </div>
           <strong className="purple small-value">
             {latestPlan?.latencyMs && medianJevLatency
@@ -278,8 +338,10 @@ export const DecisionCharts = memo(function DecisionCharts({
               minTickGap={28}
             />
             <YAxis
-              domain={[0, latencyCeiling]}
+              scale="log"
+              domain={[latencyFloor, latencyCeiling]}
               ticks={latencyTicks}
+              allowDataOverflow
               tickFormatter={(n) => formatLatency(Number(n))}
               tickLine={false}
               axisLine={false}
@@ -332,7 +394,7 @@ export const DecisionCharts = memo(function DecisionCharts({
                   plan.latencyMs === undefined
                     ? undefined
                     : [
-                        { x: plan.startedAt, y: 0 },
+                        { x: plan.startedAt, y: latencyFloor },
                         { x: plan.startedAt, y: plan.latencyMs },
                       ]
                 }
@@ -347,106 +409,7 @@ export const DecisionCharts = memo(function DecisionCharts({
           <span className="lime">━ Jev decision latency</span>
           <span className="purple">┃ GLM 5.3 strategy latency</span>
           <span className="danger">● Provider failure</span>
-          <span>Linear scale shows the full latency gap</span>
-        </div>
-      </section>
-      <section
-        className="signal-chart planner-activity-chart"
-        aria-label="System 2 advisory response history"
-      >
-        <div className="chart-heading">
-          <div>
-            <h3>
-              <span className="chart-dot purple-bg" />
-              System 2 · advisory responses
-            </h3>
-            <p>
-              {plannerMode === 'mock' ? 'Mock planner' : 'OpenRouter planner'} ·{' '}
-              {advisoryResponses.length} responses from {plans.length} requests
-            </p>
-          </div>
-          <strong className="purple small-value">
-            {latestPlan?.status === 'planning'
-              ? 'Thinking'
-              : latestPlan?.status === 'failed'
-                ? 'Failed'
-                : latestPlan
-                  ? `Strategy r${latestPlan.strategyRevision}`
-                  : 'Standby'}
-          </strong>
-        </div>
-        <ChartContainer
-          config={{
-            received: { label: 'Advice received', color: '#bba7f3' },
-            failed: { label: 'Request failed', color: '#ff9286' },
-          }}
-          className="signal-chart-canvas planner-chart"
-          aria-label="System 2 responses aligned to mission time"
-        >
-          <BarChart
-            data={advisoryResponses}
-            syncId={`mission-${agentId}`}
-            syncMethod="value"
-            margin={{ top: 26, right: 18, bottom: 4, left: 0 }}
-            accessibilityLayer
-          >
-            <CartesianGrid
-              vertical={false}
-              stroke="#233442"
-              strokeDasharray="3 5"
-            />
-            <XAxis
-              dataKey="time"
-              type="number"
-              domain={domain}
-              tickFormatter={(n) => `${n}s`}
-              tickLine={false}
-              axisLine={false}
-              minTickGap={28}
-            />
-            <YAxis
-              domain={[0, 1]}
-              ticks={[0, 1]}
-              tickFormatter={(n) => (n ? 'Received' : '')}
-              tickLine={false}
-              axisLine={false}
-              width={64}
-            />
-            <Tooltip
-              contentStyle={tooltipStyle}
-              labelFormatter={(v) => `Mission ${Number(v).toFixed(1)}s`}
-              formatter={(value, name) => [
-                Number(value)
-                  ? name === 'failed'
-                    ? 'Failed'
-                    : 'Advice received'
-                  : '',
-                name === 'failed' ? 'System 2 failure' : 'System 2 advice',
-              ]}
-            />
-            <Bar
-              dataKey="received"
-              fill="#bba7f3"
-              barSize={10}
-              isAnimationActive={false}
-            />
-            <Bar
-              dataKey="failed"
-              fill="#ff9286"
-              barSize={10}
-              isAnimationActive={false}
-            />
-          </BarChart>
-        </ChartContainer>
-        <div className="chart-legend">
-          <span className="purple">▮ Advice received</span>
-          <span className="danger">▮ Request failed</span>
-          <span>Bars mark response arrival · shared mission-time axis</span>
-          <span>
-            {latestPlan?.latencyMs !== undefined
-              ? `Last request: ${(latestPlan.latencyMs / 1000).toFixed(2)}s wall time`
-              : 'Requests begin when confidence falls below the gate.'}
-          </span>
+          <span>Log scale reveals the full latency gap</span>
         </div>
       </section>
       {!events.length && (

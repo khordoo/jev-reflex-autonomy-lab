@@ -979,11 +979,8 @@ footer {
   display: grid;
   gap: 16px;
 }
-.planner-activity-chart {
-  order: 2;
-}
 .latency-chart {
-  order: 3;
+  order: 2;
 }
 .chart-empty {
   order: 4;
@@ -1046,9 +1043,6 @@ footer {
   height: 190px;
   aspect-ratio: auto;
   margin-top: 4px;
-}
-.planner-chart {
-  height: 140px;
 }
 .chart-legend {
   display: flex;
@@ -1114,9 +1108,6 @@ footer {
   }
   .signal-chart-canvas {
     height: 180px;
-  }
-  .planner-chart {
-    height: 145px;
   }
   .chart-legend {
     font-size: 12px;
