@@ -31,12 +31,34 @@ export async function POST(request: Request) {
     const key =
       (env as { TYPESAFE_API_KEY?: string }).TYPESAFE_API_KEY ||
       process.env.TYPESAFE_API_KEY;
-    const result = await callJev(
-      context,
-      key,
-      AbortSignal.any([request.signal, AbortSignal.timeout(5000)]),
-    );
-    return Response.json(result, { headers: { 'Cache-Control': 'no-store' } });
+    const deadline = performance.now() + 5500;
+    const attempt = () =>
+      callJev(
+        context,
+        key,
+        AbortSignal.any([
+          request.signal,
+          AbortSignal.timeout(
+            Math.min(3000, Math.max(1, deadline - performance.now())),
+          ),
+        ]),
+      );
+    const decide = async () => {
+      let lastError: unknown;
+      for (let tries = 0; tries < 2; tries++) {
+        try {
+          return await attempt();
+        } catch (error) {
+          lastError = error;
+          const message = error instanceof Error ? error.message : '';
+          if (!/HTTP 5\d\d/.test(message)) throw error;
+        }
+      }
+      throw lastError;
+    };
+    return Response.json(await decide(), {
+      headers: { 'Cache-Control': 'no-store' },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
     const safe =
