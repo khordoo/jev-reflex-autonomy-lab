@@ -1,9 +1,12 @@
 import type { PlanningContext, Strategy } from './types';
 import { validateStrategy } from './strategy-validation';
+import { compactPlanningContext } from './planning-context';
 export const DEFAULT_PLANNER_MODEL = 'meta/muse-spark-1.3-contributor';
+export const DEFAULT_PLANNER_FALLBACK_MODEL = 'z-ai/glm-5.3';
 // Official request contract: https://openrouter.ai/docs/api_reference/overview
 // and https://openrouter.ai/docs/guides/features/structured-outputs (2026-09-16).
 export function planningRequest(context: PlanningContext, model: string) {
+  const compactContext = compactPlanningContext(context);
   return {
     model,
     stream: false,
@@ -19,9 +22,7 @@ export function planningRequest(context: PlanningContext, model: string) {
       {
         role: 'user',
         content: JSON.stringify({
-          ...context,
-          observations: context.observations.slice(-30),
-          decisions: context.decisions.slice(-20),
+          ...compactContext,
           units: 'metres, seconds, radians',
         }),
       },
@@ -109,18 +110,25 @@ export async function callPlanner(
     );
   if (!model || model.length > 150 || !/^[\w./:-]+$/.test(model))
     throw new Error('OpenRouter model configuration is invalid');
-  const response = await transport(
-    'https://openrouter.ai/api/v1/chat/completions',
-    {
+  const request = (selectedModel: string) =>
+    transport('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(planningRequest(context, model)),
+      body: JSON.stringify(planningRequest(context, selectedModel)),
       signal,
-    },
-  );
+    });
+  let response = await request(model);
+  // Rate limits and server failures may be isolated to one model/provider.
+  // Retry once on the independent fallback with the same bounded context.
+  if (
+    (response.status === 429 || response.status >= 500) &&
+    model !== DEFAULT_PLANNER_FALLBACK_MODEL &&
+    !signal.aborted
+  )
+    response = await request(DEFAULT_PLANNER_FALLBACK_MODEL);
   if (!response.ok) {
     if (response.status === 403 || response.status === 404) {
       const errorBody = (await response.json().catch(() => ({}))) as {
@@ -141,6 +149,10 @@ export async function callPlanner(
           'OpenRouter privacy settings exclude this Contributor model because it may use prompts and outputs for training. Review openrouter.ai/settings/privacy or choose another model.',
         );
     }
+    if (response.status === 429 || response.status >= 500)
+      throw new Error(
+        `OpenRouter planners unavailable (HTTP ${response.status}). The primary and fallback models both failed or were rate-limited.`,
+      );
     throw new Error(
       `OpenRouter service returned HTTP ${response.status}. Check model access, credits and configuration.`,
     );

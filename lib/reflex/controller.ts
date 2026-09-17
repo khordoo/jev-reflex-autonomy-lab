@@ -7,6 +7,7 @@ import {
   type TelemetryEvent,
   type World,
 } from './types';
+import { compactPlanningContext } from './planning-context';
 import { observe } from './sensors';
 import { applyAction, outcome } from './world';
 import { validateDecision } from './validation';
@@ -207,11 +208,11 @@ export class Controller {
         void this.bounded(
           (signal) =>
             this.planner.plan(
-              {
+              compactPlanningContext({
                 ...context,
                 observations: [...s.history],
                 decisions: s.telemetry.slice(-30).map((e) => e.decision),
-              },
+              }),
               signal,
             ),
           30000,

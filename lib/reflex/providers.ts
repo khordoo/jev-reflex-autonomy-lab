@@ -10,6 +10,7 @@ import {
 import { validateDecision } from './validation';
 import { validateStrategy } from './strategy-validation';
 import { actionProjections } from './action-projection';
+import { compactPlanningContext } from './planning-context';
 function delay(ms: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     if (signal.aborted) return reject(new Error('Cancelled'));
@@ -125,7 +126,7 @@ export class OpenRouterStrategyProvider implements StrategyProvider {
     const response = await fetch('/api/strategy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(context),
+      body: JSON.stringify(compactPlanningContext(context)),
       signal,
     });
     const body = await response.json();

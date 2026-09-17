@@ -24,10 +24,16 @@ import {
 } from '../lib/reflex/chart-data';
 import {
   callPlanner,
+  DEFAULT_PLANNER_FALLBACK_MODEL,
   parsePlan,
   planningRequest,
   DEFAULT_PLANNER_MODEL,
 } from '../lib/reflex/openrouter-server';
+import {
+  compactPlanningContext,
+  PLANNER_DECISION_WINDOW,
+  PLANNER_OBSERVATION_WINDOW,
+} from '../lib/reflex/planning-context';
 import {
   callJev,
   jevRequest,
@@ -528,6 +534,30 @@ test('OpenRouter requests the selected model and strict strategy schema, preserv
     /Invalid planner/,
   );
 });
+test('System 2 context is bounded before transport and inside the model request', () => {
+  const context = planningFixture();
+  context.observations = Array.from({ length: 80 }, (_, index) => ({
+    ...context.observation,
+    time: index,
+  }));
+  context.decisions = Array.from({ length: 30 }, () => ({
+    action: 'HOLD' as const,
+    confidence: 1,
+    probabilities: Object.fromEntries(
+      ACTIONS.map((action) => [action, action === 'HOLD' ? 1 : 0]),
+    ) as Record<(typeof ACTIONS)[number], number>,
+  }));
+  const compact = compactPlanningContext(context);
+  assert.equal(compact.observations.length, PLANNER_OBSERVATION_WINDOW);
+  assert.equal(compact.observations[0].time, 80 - PLANNER_OBSERVATION_WINDOW);
+  assert.equal(compact.decisions.length, PLANNER_DECISION_WINDOW);
+  assert.ok(JSON.stringify(compact).length < 200000);
+
+  const request = planningRequest(context, DEFAULT_PLANNER_MODEL);
+  const payload = JSON.parse(request.messages[1].content) as PlanningContext;
+  assert.equal(payload.observations.length, PLANNER_OBSERVATION_WINDOW);
+  assert.equal(payload.decisions.length, PLANNER_DECISION_WINDOW);
+});
 test('OpenRouter missing key and HTTP failures never substitute a mock strategy', async () => {
   const context = planningFixture(),
     signal = new AbortController().signal;
@@ -546,6 +576,44 @@ test('OpenRouter missing key and HTTP failures never substitute a mock strategy'
     /HTTP 429/,
   );
 });
+for (const recoverableStatus of [429, 500, 503, 529])
+  test(`OpenRouter retries HTTP ${recoverableStatus} once with GLM 5.3`, async () => {
+    const context = planningFixture();
+    const models: string[] = [];
+    const content = {
+      mode: 'CAUTIOUS_BYPASS',
+      preferredSide: 'right',
+      safetyDistance: 90,
+      scanRequired: true,
+      rationale: 'Maintain clearance while collecting evidence.',
+    };
+    const plan = await callPlanner(
+      context,
+      'test-key',
+      DEFAULT_PLANNER_MODEL,
+      new AbortController().signal,
+      async (_url, init) => {
+        const body = init?.body;
+        assert.equal(typeof body, 'string');
+        models.push(JSON.parse(body).model);
+        if (models.length === 1)
+          return new Response('{}', { status: recoverableStatus });
+        return Response.json({
+          choices: [
+            {
+              finish_reason: 'stop',
+              message: { content: JSON.stringify(content) },
+            },
+          ],
+        });
+      },
+    );
+    assert.deepEqual(models, [
+      DEFAULT_PLANNER_MODEL,
+      DEFAULT_PLANNER_FALLBACK_MODEL,
+    ]);
+    assert.equal(plan.revision, 1);
+  });
 test('controller records planner start and completion at actual simulation times', async () => {
   const w = createWorld();
   w.time = 12;
