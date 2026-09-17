@@ -10,6 +10,18 @@ import {
   chooseMockDecision,
 } from '../lib/reflex/providers';
 import { ACTIONS } from '../lib/reflex/types';
+import type {
+  PlanningContext,
+  PlanningEvent,
+  Strategy,
+} from '../lib/reflex/types';
+import { confidenceSeries, plannerSeries } from '../lib/reflex/chart-data';
+import {
+  callPlanner,
+  parsePlan,
+  planningRequest,
+  DEFAULT_PLANNER_MODEL,
+} from '../lib/reflex/openrouter-server';
 import {
   callJev,
   jevRequest,
@@ -201,5 +213,192 @@ test('per-agent strategy and observation histories are isolated', async () => {
   await new Promise((r) => setTimeout(r, 10));
   assert.equal(c.state('drone_002').history[0].observerId, 'drone_002');
   assert.notEqual(c.state('drone_001').history, c.state('drone_002').history);
+  c.dispose();
+});
+
+test('confidence chart uses returned confidence and leaves gaps for provider failures', async () => {
+  const w = createWorld(),
+    c = new Controller(
+      new MockDecisionProvider(0),
+      new MockStrategyProvider(0),
+    );
+  c.threshold = 0.8;
+  c.tick(w);
+  await new Promise((r) => setTimeout(r, 10));
+  const event = c.state('drone_001').telemetry[0];
+  const data = confidenceSeries(
+    [event],
+    [
+      { agentId: 'drone_001', simulationTime: 2 },
+      { agentId: 'drone_002', simulationTime: 1 },
+    ],
+    'drone_001',
+  );
+  assert.equal(data.length, 2);
+  assert.equal(data[0].confidence, event.decision.confidence * 100);
+  assert.equal(data[0].threshold, 80);
+  assert.equal(data[1].confidence, null);
+  assert.deepEqual(confidenceSeries([], [], 'drone_001'), []);
+  c.dispose();
+});
+test('planner chart shows exact request intervals including pending requests', () => {
+  const plans: PlanningEvent[] = [
+    {
+      id: 'p1',
+      agentId: 'drone_001',
+      provider: 'mock',
+      mode: 'mock',
+      startedAt: 12,
+      endedAt: 14.4,
+      latencyMs: 2400,
+      status: 'completed',
+      triggerConfidence: 0.46,
+      strategyRevision: 1,
+    },
+    {
+      id: 'p2',
+      agentId: 'drone_001',
+      provider: 'mock',
+      mode: 'mock',
+      startedAt: 22,
+      status: 'planning',
+      triggerConfidence: 0.42,
+    },
+  ];
+  assert.deepEqual(plannerSeries(plans, 24, 'drone_001'), [
+    { time: 0, active: 0 },
+    { time: 12, active: 1 },
+    { time: 14.4, active: 0 },
+    { time: 22, active: 1 },
+    { time: 24, active: 1 },
+  ]);
+  assert.deepEqual(plannerSeries(plans, 24, 'drone_002'), [
+    { time: 0, active: 0 },
+    { time: 24, active: 0 },
+  ]);
+});
+function planningFixture(): PlanningContext {
+  const w = createWorld();
+  w.time = 12;
+  w.agents.drone_001.position = { x: 720, y: 360 };
+  const c = new Controller(
+    new MockDecisionProvider(),
+    new MockStrategyProvider(),
+  );
+  const observation = observe(w, 'drone_001');
+  return {
+    agentId: 'drone_001',
+    observation,
+    strategy: c.state('drone_001').strategy,
+    mission: 'Transit',
+    actions: ACTIONS,
+    observations: [observation],
+    decisions: [],
+  };
+}
+test('OpenRouter requests the selected model and strict strategy schema, preserving agent ownership', () => {
+  const context = planningFixture();
+  const request = planningRequest(context, DEFAULT_PLANNER_MODEL);
+  assert.equal(request.model, 'meta/muse-spark-1.3-contributor');
+  assert.equal(request.response_format.type, 'json_schema');
+  assert.equal(request.provider.require_parameters, true);
+  const content = {
+    mode: 'CAUTIOUS_BYPASS',
+    preferredSide: 'left',
+    safetyDistance: 110,
+    scanRequired: true,
+    rationale: 'Gather evidence before resuming transit.',
+  };
+  const plan = parsePlan(
+    {
+      choices: [
+        {
+          finish_reason: 'stop',
+          message: { content: JSON.stringify(content) },
+        },
+      ],
+    },
+    context,
+  );
+  assert.equal(plan.agentId, context.agentId);
+  assert.equal(plan.revision, 1);
+  assert.equal(plan.preferredSide, 'left');
+  assert.throws(
+    () =>
+      parsePlan(
+        {
+          choices: [
+            {
+              finish_reason: 'length',
+              message: { content: JSON.stringify(content) },
+            },
+          ],
+        },
+        context,
+      ),
+    /complete strategy/,
+  );
+  assert.throws(
+    () =>
+      parsePlan(
+        {
+          choices: [
+            {
+              finish_reason: 'stop',
+              message: {
+                content: JSON.stringify({ ...content, safetyDistance: -1 }),
+              },
+            },
+          ],
+        },
+        context,
+      ),
+    /Invalid planner/,
+  );
+});
+test('OpenRouter missing key and HTTP failures never substitute a mock strategy', async () => {
+  const context = planningFixture(),
+    signal = new AbortController().signal;
+  await assert.rejects(
+    callPlanner(context, undefined, DEFAULT_PLANNER_MODEL, signal),
+    /OPENROUTER_API_KEY/,
+  );
+  await assert.rejects(
+    callPlanner(
+      context,
+      'test-key',
+      DEFAULT_PLANNER_MODEL,
+      signal,
+      async () => new Response('{}', { status: 429 }),
+    ),
+    /HTTP 429/,
+  );
+});
+test('controller records planner start and completion at actual simulation times', async () => {
+  const w = createWorld();
+  w.time = 12;
+  w.agents.drone_001.position = { x: 720, y: 360 };
+  let finish!: (value: Strategy) => void;
+  const planner = {
+    name: 'controlled',
+    mode: 'mock' as const,
+    plan: () =>
+      new Promise<Strategy>((resolve) => {
+        finish = resolve;
+      }),
+  };
+  const c = new Controller(new MockDecisionProvider(0), planner);
+  c.tick(w);
+  await new Promise((r) => setTimeout(r, 10));
+  const s = c.state('drone_001');
+  assert.equal(s.planningEvents[0].startedAt, 12);
+  assert.equal(s.planningEvents[0].status, 'planning');
+  w.time = 15;
+  finish({ ...s.strategy, mode: 'CAUTIOUS_BYPASS', revision: 1 });
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(s.planningEvents[0].endedAt, 15);
+  assert.equal(s.planningEvents[0].status, 'completed');
+  assert.equal(s.planningEvents[0].strategyRevision, 1);
+  assert.equal(s.planning, false);
   c.dispose();
 });

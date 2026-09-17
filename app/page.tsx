@@ -12,11 +12,20 @@ import {
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { MissionCanvas } from '@/components/mission-canvas';
+import { DecisionCharts } from '@/components/decision-charts';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 import { Controller } from '@/lib/reflex/controller';
 import {
   JevDecisionProvider,
   MockDecisionProvider,
   MockStrategyProvider,
+  OpenRouterStrategyProvider,
 } from '@/lib/reflex/providers';
 import { createWorld, stepWorld } from '@/lib/reflex/world';
 import type { World } from '@/lib/reflex/types';
@@ -31,7 +40,28 @@ export default function Home() {
     [sensors, setSensors] = useState(true),
     [threshold, setThreshold] = useState(70),
     [mode, setMode] = useState('mock'),
+    [plannerMode, setPlannerMode] = useState('mock'),
     [seed, setSeed] = useState(42);
+  const [providerConfig, setProviderConfig] = useState({
+    jevConfigured: false,
+    plannerConfigured: false,
+    plannerModel: 'meta/muse-spark-1.3-contributor',
+  });
+  const [configError, setConfigError] = useState(false);
+  async function checkProviders() {
+    try {
+      const response = await fetch('/api/providers');
+      if (!response.ok) throw new Error();
+      const result = (await response.json()) as typeof providerConfig;
+      setProviderConfig(result);
+      setConfigError(false);
+    } catch {
+      setConfigError(true);
+    }
+  }
+  useEffect(() => {
+    void checkProviders();
+  }, []);
   const [, refresh] = useState(0);
   const runningRef = useRef(false);
   runningRef.current = running;
@@ -112,6 +142,7 @@ export default function Home() {
   function reset(
     scenario: World['scenario'] = world.scenario,
     provider = mode,
+    planner = plannerMode,
   ) {
     controller.dispose();
     setRunning(false);
@@ -121,7 +152,9 @@ export default function Home() {
         provider === 'mock'
           ? new MockDecisionProvider()
           : new JevDecisionProvider(),
-        new MockStrategyProvider(),
+        planner === 'mock'
+          ? new MockStrategyProvider()
+          : new OpenRouterStrategyProvider(providerConfig.plannerModel),
       ),
     );
   }
@@ -134,9 +167,11 @@ export default function Home() {
             scenario: world.scenario,
             seed: world.seed,
             mode,
+            plannerMode,
             threshold,
             world,
             events,
+            planningEvents: control.planningEvents,
             failures: controller.failures,
           },
           null,
@@ -193,11 +228,14 @@ export default function Home() {
         </div>
         <div className="mode-badge">
           <span className="amber-dot" />
-          {mode === 'mock' ? 'DEVELOPMENT MOCK' : 'JEV SELECTED'}
+          {mode === 'mock' && plannerMode === 'mock'
+            ? 'DEVELOPMENT MOCK'
+            : mode === 'jev' && plannerMode === 'openrouter'
+              ? 'LIVE PROVIDERS SELECTED'
+              : 'MIXED PROVIDERS'}
           <small>
-            {mode === 'mock'
-              ? 'Synthetic decisions · no live AI calls'
-              : 'Live reflex adapter · mock planner'}
+            {mode === 'mock' ? 'Mock reflexes' : 'TypeSafe Jev'} ·{' '}
+            {plannerMode === 'mock' ? 'mock planner' : 'Muse Spark planner'}
           </small>
         </div>
       </section>
@@ -411,16 +449,16 @@ export default function Home() {
               <strong>
                 {control.strategy.mode === 'TRANSIT'
                   ? 'Preserve. Progress. Arrive.'
-                  : 'Scan. Bypass right. Resume.'}
+                  : `${control.strategy.scanRequired ? 'Scan. ' : ''}Bypass ${control.strategy.preferredSide}. Resume.`}
               </strong>
-              <p>
-                {control.strategy.revision
-                  ? 'Maintain 85 m clearance. Collect evidence while passing the signal source.'
-                  : 'Follow the route and preserve the drone. Escalate when the reflex layer is uncertain.'}
-              </p>
+              <p>{control.strategy.rationale}</p>
             </div>
             <div className="planner-foot">
-              <span>Mock planner</span>
+              <span>
+                {plannerMode === 'mock'
+                  ? 'Mock planner'
+                  : 'OpenRouter · Muse Spark'}
+              </span>
               <span>
                 REV {String(control.strategy.revision).padStart(2, '0')}
               </span>
@@ -431,6 +469,11 @@ export default function Home() {
       {control.error && (
         <div role="alert" className="error-banner">
           {control.error}
+        </div>
+      )}
+      {control.plannerError && (
+        <div role="alert" className="error-banner">
+          System 2: {control.plannerError}
         </div>
       )}
       <section className="timeline">
@@ -461,61 +504,22 @@ export default function Home() {
         <div className="telemetry">
           <div className="section-title">
             <h2>
-              Decision stream <span>{events.length} events</span>
+              Decision history <span>{events.length} events</span>
             </h2>
             <button className="text-button" onClick={download}>
               <Download size={15} /> Export JSON
             </button>
           </div>
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>TIME</th>
-                  <th>ACTION</th>
-                  <th>CONFIDENCE</th>
-                  <th>CALL TIME</th>
-                  <th>RESULT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.length ? (
-                  events
-                    .slice(-5)
-                    .reverse()
-                    .map((e, i) => (
-                      <tr key={e.timestamp + i}>
-                        <td>{e.simulationTime.toFixed(1)}s</td>
-                        <td>{e.decision.action.replaceAll('_', ' ')}</td>
-                        <td
-                          className={
-                            e.decision.confidence < threshold / 100
-                              ? 'amber'
-                              : 'lime'
-                          }
-                        >
-                          {Math.round(e.decision.confidence * 100)}%
-                        </td>
-                        <td>{e.latencyMs.toFixed(0)} ms</td>
-                        <td>
-                          {e.escalated
-                            ? '↑ System 2'
-                            : e.executed
-                              ? 'Executed'
-                              : 'Withheld'}
-                        </td>
-                      </tr>
-                    ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="empty">
-                      Launch the mission to start the decision stream.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <DecisionCharts
+            events={events}
+            planningEvents={control.planningEvents}
+            failures={controller.failures}
+            time={world.time}
+            threshold={threshold}
+            agentId={drone.id}
+            decisionMode={controller.decisionProvider.mode}
+            plannerMode={controller.planner.mode}
+          />
         </div>
         <div className="settings">
           <h2>Experiment controls</h2>
@@ -534,17 +538,73 @@ export default function Home() {
           <p>Confidence below this gate requests a strategy.</p>
           <div className="setting-row">
             <label htmlFor="provider">Decision provider</label>
-            <select
-              id="provider"
+            <Select
               value={mode}
-              onChange={(e) => {
-                setMode(e.target.value);
-                reset(world.scenario, e.target.value);
+              onValueChange={(v) => {
+                if (v) {
+                  setMode(v);
+                  reset(world.scenario, v);
+                }
               }}
             >
-              <option value="mock">Development mock</option>
-              <option value="jev">Jev (requires server key)</option>
-            </select>
+              <SelectTrigger id="provider">
+                <SelectValue>
+                  {mode === 'mock' ? 'Development mock' : 'TypeSafe Jev'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mock">Development mock</SelectItem>
+                <SelectItem value="jev">TypeSafe Jev</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="setting-row">
+            <label htmlFor="planner">Strategy provider</label>
+            <Select
+              value={plannerMode}
+              onValueChange={(v) => {
+                if (v) {
+                  setPlannerMode(v);
+                  reset(world.scenario, mode, v);
+                }
+              }}
+            >
+              <SelectTrigger id="planner">
+                <SelectValue>
+                  {plannerMode === 'mock' ? 'Development mock' : 'OpenRouter'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mock">Development mock</SelectItem>
+                <SelectItem value="openrouter">OpenRouter</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="provider-setup">
+            <span className={providerConfig.jevConfigured ? 'lime' : 'muted'}>
+              Jev key:{' '}
+              {providerConfig.jevConfigured ? 'configured' : 'not configured'}
+            </span>
+            <span
+              className={providerConfig.plannerConfigured ? 'purple' : 'muted'}
+            >
+              OpenRouter key:{' '}
+              {providerConfig.plannerConfigured
+                ? 'configured'
+                : 'not configured'}
+            </span>
+            <small>{providerConfig.plannerModel}</small>
+            <button
+              className="text-button"
+              onClick={() => void checkProviders()}
+            >
+              Refresh connection status
+            </button>
+            {configError && (
+              <span className="amber">
+                Could not read server configuration.
+              </span>
+            )}
           </div>
           <div className="setting-row">
             <label htmlFor="seed">Scenario seed</label>

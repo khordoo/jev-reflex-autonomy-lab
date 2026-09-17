@@ -989,3 +989,136 @@ footer {
     font-size: 36px;
   }
 }
+
+.decision-charts {
+  display: grid;
+  gap: 16px;
+}
+.signal-chart {
+  border: 1px solid #263946;
+  border-radius: 8px;
+  background: #0c161f;
+  overflow: hidden;
+  padding: 18px 18px 12px;
+  min-width: 0;
+}
+.chart-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.chart-heading h3 {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0;
+}
+.chart-heading p {
+  color: #8098a8;
+  font-size: 12px;
+  margin: 6px 0 0;
+}
+.chart-heading strong {
+  font:
+    400 27px var(--font-geist-mono),
+    monospace;
+}
+.chart-heading .small-value {
+  font-size: 14px;
+}
+.chart-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.lime-bg {
+  background: #b7f580;
+}
+.purple-bg {
+  background: #bba7f3;
+}
+.purple {
+  color: #bba7f3;
+}
+.signal-chart-canvas {
+  width: 100%;
+  height: 190px;
+  aspect-ratio: auto;
+  margin-top: 4px;
+}
+.planner-chart {
+  height: 140px;
+}
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+  color: #88a0af;
+  font-size: 12px;
+  margin-top: 4px;
+}
+.chart-empty {
+  font-size: 14px;
+  color: #93aab9;
+  margin: 0;
+  padding: 8px 0;
+}
+.provider-setup {
+  display: grid;
+  gap: 7px;
+  font-size: 12px;
+  color: #8ba1b0;
+  border: 1px solid #293e4e;
+  padding: 12px;
+  border-radius: 5px;
+  margin: 16px 0;
+}
+.provider-setup .muted {
+  display: block;
+  margin: 0;
+}
+.provider-setup small {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.provider-setup button {
+  justify-content: flex-start;
+}
+.settings [data-slot='select-trigger'] {
+  max-width: 180px;
+  font-size: 12px;
+  color: #bdd1dd;
+  background: #111d27;
+}
+[data-slot='select-content'] {
+  background: #14232e;
+  color: #d5e3eb;
+}
+.lower-grid > .telemetry {
+  min-width: 0;
+}
+@media (max-width: 560px) {
+  .signal-chart {
+    padding: 15px 9px 12px;
+  }
+  .chart-heading h3 {
+    font-size: 13px;
+  }
+  .chart-heading strong {
+    font-size: 22px;
+  }
+  .signal-chart-canvas {
+    height: 180px;
+  }
+  .planner-chart {
+    height: 145px;
+  }
+  .chart-legend {
+    font-size: 12px;
+  }
+}

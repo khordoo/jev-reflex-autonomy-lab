@@ -10,17 +10,21 @@ Components and files:
 - `lib/reflex/types.ts`: internal contracts, actions, observations, strategies and telemetry.
 - `lib/reflex/world.ts`: seeded scenario, exact physics and action application.
 - `lib/reflex/sensors.ts`: geometric measurements, no action recommendations.
-- `lib/reflex/providers.ts`: explicit development mocks and unavailable Jev seam.
+- `lib/reflex/providers.ts`: explicit development mocks and browser proxies for Jev/OpenRouter.
+- `lib/reflex/jev-server.ts`, `openrouter-server.ts`: isolated vendor-specific adapters.
+- `lib/reflex/chart-data.ts`, `components/decision-charts.tsx`: two aligned telemetry charts.
 - `lib/reflex/controller.ts`: bounded history, asynchronous decisions, confidence escalation, cancellation and errors.
 - `components/mission-canvas.tsx`: tactical world visualization.
 - `app/page.tsx`: controls, provider status, decision/strategy telemetry and export.
 - `tests/reflex.test.ts`: core invariants and deterministic replay.
 
-Key interfaces: DecisionProvider.decide(DecisionContext, AbortSignal) returns an internal typed Decision; StrategyProvider.plan(PlanningContext, AbortSignal) returns Strategy. These are application contracts, NOT TypeSafe SDK methods. A future server adapter maps the documented vendor response into these contracts.
+Key interfaces: DecisionProvider.decide(DecisionContext, AbortSignal) returns an internal typed Decision; StrategyProvider.plan(PlanningContext, AbortSignal) returns Strategy. These are application contracts, NOT TypeSafe SDK methods. Server adapters map documented vendor responses into these contracts.
 
-Implementation phases: (1) world/sensors/actions and mock loop; (2) real Jev adapter after inspecting supplied quickstart; (3) real reasoning provider after model/configuration selection; (4) tune actual confidence distribution and recorded hero scenario. The current artifact validates Phase 1 mechanics and mock cooperation only.
+Implementation phases: (1) world/sensors/actions and mock loop; (2) real Jev adapter after documentation inspection; (3) real reasoning provider; (4) tune actual confidence distribution and hero scenario. Both live adapters are implemented. See LIVE-VALIDATION.md for measured results and remaining account/service constraints.
 
-Integration update after the first mock slice: located and inspected the official TypeSafe quickstart and API reference (https://docs.typesafe.ai/introduction/quickstart and https://docs.typesafe.ai/api, 2026-09-16). `lib/reflex/jev-server.ts` maps the documented Choice API, using `jev-latest` and Bearer authentication, behind `app/api/decision/route.ts`. The client sees only our internal decision contract. Confidence is NOT assumed equal to the selected probability. Actual credentials, service latency, rate limits for this account, and useful real-model behavior remain unverified. System 2 provider/model remains pending. Credentials must live in server environment variables; never in browser bundles or committed files.
+Integration update: inspected the official TypeSafe quickstart/API reference (https://docs.typesafe.ai/introduction/quickstart and https://docs.typesafe.ai/api, 2026-09-16). The Jev server adapter maps the documented Choice API using `jev-latest` and Bearer authentication. Confidence is NOT assumed equal to selected probability. OpenRouter uses the user-selected `meta/muse-spark-1.3-contributor` with strict structured output and runtime validation. Credentials live in server environment variables; never in browser bundles or committed files.
+
+Chart semantics: per-agent confidence samples and the gate at decision time are retained. No fake samples precede launch. Request failures create gaps, not zero confidence. Planner start/end events use actual simulation timestamps and retain measured wall duration, completion/failure status, provider and strategy revision. Both charts share a time domain; UI rendering does not create decision or planning events.
 
 Mock policy: mock action probabilities are synthetic and labeled; displayed elapsed time measures the local mock call including its deliberate delay, never vendor API latency. Ambiguous observations reduce mock confidence; scenario stage/time never directly invokes the planner. Low-confidence actions are withheld (passive coast); high-confidence actions continue while planning. At most one decision and one planner request per agent are in flight, each with timeout and stale-result guards. Planner cooldown prevents repeated requests on the same unresolved context.
 

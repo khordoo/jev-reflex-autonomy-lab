@@ -1,6 +1,7 @@
 import {
   ACTIONS,
   type AgentControl,
+  type PlanningEvent,
   type DecisionProvider,
   type StrategyProvider,
   type TelemetryEvent,
@@ -9,6 +10,7 @@ import {
 import { observe } from './sensors';
 import { applyAction, outcome } from './world';
 import { validateDecision } from './validation';
+import { validateStrategy } from './strategy-validation';
 export { validateDecision } from './validation';
 export class Controller {
   agents: Record<string, AgentControl> = {};
@@ -55,6 +57,7 @@ export class Controller {
       lastPlanAt: -100,
       history: [],
       telemetry: [],
+      planningEvents: [],
     });
   }
   tick(world: World) {
@@ -134,6 +137,7 @@ export class Controller {
         decision,
         latencyMs: s.latencyMs,
         provider: this.decisionProvider.name,
+        threshold: this.threshold,
         executed,
         escalated,
         strategyBefore: strategy,
@@ -144,8 +148,20 @@ export class Controller {
       if (s.telemetry.length > 1500) s.telemetry.shift();
       if (escalated) {
         s.planning = true;
+        s.plannerError = undefined;
         s.lastPlanAt = world.time;
         const planStart = performance.now();
+        const planningEvent: PlanningEvent = {
+          id: `${id}:${event.timestamp}`,
+          agentId: id,
+          provider: this.planner.name,
+          mode: this.planner.mode,
+          startedAt: world.time,
+          status: 'planning',
+          triggerConfidence: decision.confidence,
+        };
+        s.planningEvents.push(planningEvent);
+        if (s.planningEvents.length > 200) s.planningEvents.shift();
         void this.bounded(
           (signal) =>
             this.planner.plan(
@@ -156,33 +172,34 @@ export class Controller {
               },
               signal,
             ),
-          12000,
+          30000,
         )
           .then((plan) => {
             if (this.disposed || generation !== this.generation) return;
-            if (
-              plan.agentId !== id ||
-              !['TRANSIT', 'CAUTIOUS_BYPASS'].includes(plan.mode) ||
-              !['left', 'right'].includes(plan.preferredSide) ||
-              !Number.isFinite(plan.safetyDistance) ||
-              plan.safetyDistance < 0 ||
-              plan.safetyDistance > 300 ||
-              typeof plan.scanRequired !== 'boolean' ||
-              typeof plan.rationale !== 'string'
-            )
-              throw new Error('Invalid planner strategy');
+            validateStrategy(plan, id);
+            if (plan.revision !== strategy.revision + 1)
+              throw new Error('Invalid planner strategy revision');
             s.strategy = plan;
             event.strategyAfter = { ...plan };
             event.system2LatencyMs = performance.now() - planStart;
+            planningEvent.status = 'completed';
+            planningEvent.strategyRevision = plan.revision;
           })
           .catch((error) => {
-            if (!this.disposed) {
-              s.error = String(error.message);
-              event.error = s.error;
+            if (!this.disposed && generation === this.generation) {
+              s.plannerError = String(error.message);
+              event.error = s.plannerError;
+              planningEvent.status = 'failed';
+              planningEvent.error = s.plannerError;
             }
           })
           .finally(() => {
-            s.planning = false;
+            if (!this.disposed && generation === this.generation) {
+              s.planning = false;
+              planningEvent.endedAt = world.time;
+              planningEvent.latencyMs = performance.now() - planStart;
+              s.lastPlanAt = world.time;
+            }
           });
       }
     } catch (error) {

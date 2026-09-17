@@ -8,6 +8,7 @@ import {
   type StrategyProvider,
 } from './types';
 import { validateDecision } from './validation';
+import { validateStrategy } from './strategy-validation';
 function delay(ms: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     if (signal.aborted) return reject(new Error('Cancelled'));
@@ -102,8 +103,34 @@ export class JevDecisionProvider implements DecisionProvider {
       signal,
     });
     const body = await response.json();
-    if (!response.ok) throw new Error((body as { error?: string })?.error || 'Jev request failed');
+    if (!response.ok)
+      throw new Error(
+        (body as { error?: string })?.error || 'Jev request failed',
+      );
     validateDecision(body as Decision);
     return body as Decision;
+  }
+}
+export class OpenRouterStrategyProvider implements StrategyProvider {
+  name: string;
+  mode = 'live' as const;
+  constructor(model = 'meta/muse-spark-1.3-contributor') {
+    this.name = model;
+  }
+  async plan(context: PlanningContext, signal: AbortSignal) {
+    const response = await fetch('/api/strategy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(context),
+      signal,
+    });
+    const body = await response.json();
+    if (!response.ok)
+      throw new Error(
+        (body as { error?: string })?.error || 'OpenRouter request failed',
+      );
+    const strategy = body as import('./types').Strategy;
+    validateStrategy(strategy, context.agentId);
+    return strategy;
   }
 }

@@ -104,6 +104,7 @@ export type TelemetryEvent = {
   decision: Decision;
   latencyMs: number;
   provider: string;
+  threshold: number;
   executed: boolean;
   escalated: boolean;
   strategyBefore: Strategy;
@@ -111,6 +112,19 @@ export type TelemetryEvent = {
   system2LatencyMs?: number;
   error?: string;
   outcome: { health: number; complete: boolean; collisions: number };
+};
+export type PlanningEvent = {
+  id: string;
+  agentId: string;
+  provider: string;
+  mode: 'mock' | 'live';
+  startedAt: number;
+  endedAt?: number;
+  latencyMs?: number;
+  status: 'planning' | 'completed' | 'failed';
+  triggerConfidence: number;
+  strategyRevision?: number;
+  error?: string;
 };
 export type AgentControl = {
   strategy: Strategy;
@@ -124,4 +138,6 @@ export type AgentControl = {
   error?: string;
   history: Observation[];
   telemetry: TelemetryEvent[];
+  planningEvents: PlanningEvent[];
+  plannerError?: string;
 };
