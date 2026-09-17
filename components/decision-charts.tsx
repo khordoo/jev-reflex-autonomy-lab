@@ -51,13 +51,17 @@ export const DecisionCharts = memo(function DecisionCharts({
   const domain: [number, number] = [0, end];
   const responses = plans.filter((plan) => plan.endedAt !== undefined);
   const bumpWidth = end * 0.004;
-  const bumpHeight = 0.14;
+  const bumpScale = 0.3;
   const system2Pulses: { time: number; call: number }[] = [
     { time: 0, call: 0 },
     ...responses.flatMap((plan) => {
       const at = plan.endedAt!,
         start = Math.max(0, at - bumpWidth),
-        stop = Math.min(end, at + bumpWidth);
+        stop = Math.min(end, at + bumpWidth),
+        bumpHeight = Math.max(
+          0.05,
+          (1 - plan.triggerConfidence) * bumpScale,
+        );
       return [
         { time: start, call: 0 },
         { time: start, call: bumpHeight },
@@ -299,9 +303,9 @@ export const DecisionCharts = memo(function DecisionCharts({
             </h3>
             <p>Wall-clock response time · log scale</p>
           </div>
-          <strong className="purple small-value">
+          <strong className="lime small-value">
             {latestPlan?.latencyMs && medianJevLatency
-              ? `${Math.round(latestPlan.latencyMs / medianJevLatency)}× slower`
+              ? `${Math.round(latestPlan.latencyMs / medianJevLatency)}× faster`
               : recent
                 ? formatLatency(recent.latencyMs)
                 : '—'}
