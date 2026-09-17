@@ -17,7 +17,7 @@
 - The Jev confidence chart is green for normal Jev decisions and purple only for the one decision that actually used returned System 2 guidance.
 - The System 2 chart uses discrete bars at response arrival, not a filled request-duration area. Purple means advice returned; red means the request failed.
 - The separate latency chart shows wall-clock response duration.
-- The current escalation threshold is 25%.
+- The current escalation threshold is 20%.
 - A newly detected unknown object explicitly requests System 2. Do not remove this assuming the Jev prompt will request it: delegation is controller-owned, and prompt text alone cannot dispatch System 2.
 - Low confidence only re-escalates when the situation is also projected as hazardous.
 

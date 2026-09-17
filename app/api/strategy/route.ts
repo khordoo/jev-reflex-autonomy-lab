@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       {
         error:
           message.startsWith('OpenRouter ') ||
-          message === 'Invalid planner strategy'
+          message.startsWith('Invalid planner strategy')
             ? message
             : 'OpenRouter request failed or timed out. No mock fallback.',
       },

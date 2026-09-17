@@ -174,33 +174,33 @@ async function tickOnce(c: Controller, w: ReturnType<typeof createWorld>) {
   return c.state('drone_001').telemetry.at(-1);
 }
 
-test('system 2 activates below the 25% gate even with an empty scene', async () => {
+test('system 2 activates below the 20% gate even with an empty scene', async () => {
   const w = createWorld();
   w.objects = [];
   const c = new Controller(
-    confidenceProvider(0.24),
+    confidenceProvider(0.19),
     new MockStrategyProvider(0),
   );
   const event = await tickOnce(c, w);
-  assert.equal(event?.decision.confidence, 0.24);
+  assert.equal(event?.decision.confidence, 0.19);
   assert.equal(event?.escalated, true);
   assert.equal(event?.provisional, true);
   assert.equal(event?.executed, true);
   const state = c.state('drone_001');
   assert.equal(state.planningEvents.length, 1);
   assert.equal(state.planningEvents[0].trigger, 'confidence');
-  assert.equal(state.planningEvents[0].triggerConfidence, 0.24);
+  assert.equal(state.planningEvents[0].triggerConfidence, 0.19);
   c.dispose();
 });
-test('system 2 stays off at the 25% gate and for high confidence next to a large unknown', async () => {
+test('system 2 stays off at the 20% gate and for high confidence next to a large unknown', async () => {
   const empty = createWorld();
   empty.objects = [];
   const boundary = new Controller(
-    confidenceProvider(0.25),
+    confidenceProvider(0.2),
     new MockStrategyProvider(0),
   );
   const boundaryEvent = await tickOnce(boundary, empty);
-  assert.equal(boundaryEvent?.decision.confidence, 0.25);
+  assert.equal(boundaryEvent?.decision.confidence, 0.2);
   assert.equal(boundaryEvent?.escalated, false);
   assert.equal(boundaryEvent?.provisional, false);
   assert.equal(boundaryEvent?.executed, true);
@@ -703,7 +703,7 @@ test('controller records planner start and completion at actual simulation times
         finish = resolve;
       }),
   };
-  const c = new Controller(confidenceProvider(0.2), planner);
+  const c = new Controller(confidenceProvider(0.19), planner);
   c.tick(w);
   await new Promise((r) => setTimeout(r, 10));
   const s = c.state('drone_001');

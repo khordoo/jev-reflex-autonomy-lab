@@ -42,7 +42,9 @@ export async function POST(request: Request) {
     const safe =
       message.startsWith('Jev ') || message.startsWith('Invalid Jev')
         ? message
-        : 'Jev request failed or timed out. No mock fallback.';
+        : message
+          ? `Jev request failed: ${message}`
+          : 'Jev request failed or timed out. No mock fallback.';
     return Response.json({ error: safe }, { status: 503 });
   }
 }

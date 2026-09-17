@@ -39,7 +39,7 @@ export default function Home() {
   );
   const [running, setRunning] = useState(false),
     [sensors, setSensors] = useState(true),
-    [threshold, setThreshold] = useState(25),
+    [threshold, setThreshold] = useState(20),
     [mode, setMode] = useState('mock'),
     [plannerMode, setPlannerMode] = useState('mock'),
     [seed, setSeed] = useState(42);
@@ -632,14 +632,14 @@ export default function Home() {
             onClick={() => {
               setMode('jev');
               setPlannerMode('openrouter');
-              setThreshold(25);
+              setThreshold(20);
               reset(world.scenario, 'jev', 'openrouter');
             }}
           >
             Prepare live mission
           </button>
           <p>
-            Sets Jev + GLM 5.3 and a 25% starting gate. Launch when ready;
+            Sets Jev + GLM 5.3 and a 20% starting gate. Launch when ready;
             the gate remains adjustable.
           </p>
           <div className="setting-row">

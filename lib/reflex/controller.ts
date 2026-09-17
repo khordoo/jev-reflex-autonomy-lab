@@ -15,7 +15,7 @@ import { validateStrategy } from './strategy-validation';
 export { validateDecision } from './validation';
 export class Controller {
   agents: Record<string, AgentControl> = {};
-  threshold = 0.25;
+  threshold = 0.2;
   failures: {
     timestamp: string;
     agentId: string;
