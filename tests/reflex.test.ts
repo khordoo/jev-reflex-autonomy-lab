@@ -193,7 +193,7 @@ test('a newly detected unknown bypasses confidence and planner cooldown', async 
   assert.deepEqual(state.escalatedUnknownIds, ['unknown_05']);
   c.dispose();
 });
-test('live decisions are throttled to two requests per simulated second', async () => {
+test('live decisions resume immediately after the prior response', async () => {
   let calls = 0;
   const provider = {
     name: 'live-test',
@@ -219,11 +219,11 @@ test('live decisions are throttled to two requests per simulated second', async 
   w.time = 0.3;
   c.tick(w);
   await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.equal(calls, 1);
+  assert.equal(calls, 2);
   w.time = 0.5;
   c.tick(w);
   await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.equal(calls, 2);
+  assert.equal(calls, 3);
   c.dispose();
 });
 test('unconfigured Jev reports failure before any network request', async () => {

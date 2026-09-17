@@ -24,7 +24,6 @@ export function DecisionCharts({
   planningEvents,
   failures,
   time,
-  threshold,
   agentId,
   decisionMode,
   plannerMode,
@@ -37,7 +36,6 @@ export function DecisionCharts({
     latencyMs?: number;
   }[];
   time: number;
-  threshold: number;
   agentId: string;
   decisionMode: 'mock' | 'live';
   plannerMode: 'mock' | 'live';
@@ -120,7 +118,6 @@ export function DecisionCharts({
               label: 'Jev · System 2 planning',
               color: '#bba7f3',
             },
-            threshold: { label: 'Escalation gate', color: '#efb97b' },
           }}
           className="signal-chart-canvas"
           aria-label="Confidence from zero to one hundred percent over mission time"
@@ -159,20 +156,11 @@ export function DecisionCharts({
               labelFormatter={(v) => `Mission ${Number(v).toFixed(1)}s`}
               formatter={(v, name) => [
                 v == null ? 'No response' : `${Number(v).toFixed(1)}%`,
-                name === 'threshold'
-                  ? 'Gate at decision'
-                  : name === 'planningConfidence'
+                name === 'planningConfidence'
                     ? 'Jev confidence · System 2 planning'
                     : 'Jev confidence · solo',
               ]}
             />
-            {!confidence.length && (
-              <ReferenceLine
-                y={threshold}
-                stroke="#efb97b"
-                strokeDasharray="4 5"
-              />
-            )}
             {unknownAt !== undefined && (
               <ReferenceLine
                 x={unknownAt}
@@ -215,17 +203,6 @@ export function DecisionCharts({
               tooltipType="none"
             />
             <Line
-              type="stepAfter"
-              dataKey="threshold"
-              stroke="#efb97b"
-              strokeDasharray="4 5"
-              strokeWidth={1}
-              dot={false}
-              activeDot={false}
-              isAnimationActive={false}
-              connectNulls={false}
-            />
-            <Line
               type="linear"
               dataKey="system1Confidence"
               stroke="#b7f580"
@@ -260,7 +237,6 @@ export function DecisionCharts({
         <div className="chart-legend">
           <span className="lime">━ Jev · solo reflex loop</span>
           <span className="purple">━ Jev while System 2 plans</span>
-          <span className="amber">┄ Escalation gate</span>
         </div>
       </section>
       <section
