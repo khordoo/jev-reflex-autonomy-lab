@@ -9,6 +9,7 @@ import {
 } from './types';
 import { validateDecision } from './validation';
 import { validateStrategy } from './strategy-validation';
+import { actionProjections } from './action-projection';
 function delay(ms: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     if (signal.aborted) return reject(new Error('Cancelled'));
@@ -38,6 +39,16 @@ export function chooseMockDecision({
 }: DecisionContext) {
   let action: Action = 'HOLD',
     confidence = 0.96;
+  const projections = actionProjections(o);
+  const clearance = (a: string) =>
+    Math.min(
+      ...projections[a].contacts.map((c) => c.surfaceClearanceMetres),
+      340,
+    );
+  const mockTurn: Action =
+    clearance('TURN_LEFT') > clearance('TURN_RIGHT')
+      ? 'TURN_LEFT'
+      : 'TURN_RIGHT';
   const unknown = o.detections.find(
     (d) => d.classification === 'UNKNOWN' && Math.abs(d.relativeBearing) < 1.5,
   );
@@ -49,18 +60,10 @@ export function chooseMockDecision({
       d.closestApproach < d.estimatedSize + s.safetyDistance,
   );
   if (unknown && s.mode === 'TRANSIT') {
-    action = 'SCAN';
+    action = threat ? mockTurn : 'DECELERATE';
     confidence = 0.46;
   } else if (unknown && s.scanRequired) action = 'SCAN';
-  else if (threat)
-    action =
-      s.mode === 'CAUTIOUS_BYPASS'
-        ? s.preferredSide === 'right'
-          ? 'TURN_RIGHT'
-          : 'TURN_LEFT'
-        : threat.relativeBearing >= 0
-          ? 'TURN_LEFT'
-          : 'TURN_RIGHT';
+  else if (threat) action = mockTurn;
   else if (Math.abs(o.destinationBearing) > 0.13)
     action = o.destinationBearing > 0 ? 'TURN_RIGHT' : 'TURN_LEFT';
   else if (o.speed < (s.mode === 'CAUTIOUS_BYPASS' ? 38 : 53))

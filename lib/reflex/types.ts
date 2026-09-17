@@ -39,6 +39,8 @@ export type World = {
   destination: Vec;
 };
 export type Detection = {
+  relativePosition: Vec;
+  relativeVelocityVector: Vec;
   id: string;
   classification: SpaceObject['kind'];
   classificationConfidence: number;
@@ -106,6 +108,7 @@ export type TelemetryEvent = {
   provider: string;
   threshold: number;
   executed: boolean;
+  provisional: boolean;
   escalated: boolean;
   strategyBefore: Strategy;
   strategyAfter: Strategy;

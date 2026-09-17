@@ -409,9 +409,9 @@ export default function Home() {
             <div className="confidence-caption">
               <span>
                 {latest
-                  ? latest.executed
-                    ? 'Action executed'
-                    : 'Low confidence · action withheld'
+                  ? latest.provisional
+                    ? 'Provisional action · strategy requested'
+                    : 'Action executed'
                   : 'Waiting for launch'}
               </span>
               <span>gate {threshold}%</span>
@@ -606,6 +606,24 @@ export default function Home() {
               </span>
             )}
           </div>
+          <button
+            className="primary-button live-preset"
+            disabled={
+              !providerConfig.jevConfigured || !providerConfig.plannerConfigured
+            }
+            onClick={() => {
+              setMode('jev');
+              setPlannerMode('openrouter');
+              setThreshold(40);
+              reset(world.scenario, 'jev', 'openrouter');
+            }}
+          >
+            Prepare live mission
+          </button>
+          <p>
+            Sets Jev + Muse Spark and a 40% starting gate. Launch when ready;
+            the gate remains adjustable.
+          </p>
           <div className="setting-row">
             <label htmlFor="seed">Scenario seed</label>
             <input

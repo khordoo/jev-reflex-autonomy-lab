@@ -34,6 +34,14 @@ export function observe(world: World, agentId: string): Observation {
           v2 = vx * vx + vy * vy,
           t = v2 > 0.001 ? Math.max(0, -(x * vx + y * vy) / v2) : null;
         return {
+          relativePosition: {
+            x: x * Math.cos(d.heading) + y * Math.sin(d.heading),
+            y: -x * Math.sin(d.heading) + y * Math.cos(d.heading),
+          },
+          relativeVelocityVector: {
+            x: vx * Math.cos(d.heading) + vy * Math.sin(d.heading),
+            y: -vx * Math.sin(d.heading) + vy * Math.cos(d.heading),
+          },
           id: o.id,
           classification:
             o.kind === 'UNKNOWN' && d.scanned.includes(o.id)

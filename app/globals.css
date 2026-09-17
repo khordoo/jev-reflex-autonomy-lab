@@ -1102,6 +1102,7 @@ footer {
 .lower-grid > .telemetry {
   min-width: 0;
 }
+.live-preset { width: 100%; }
 @media (max-width: 560px) {
   .signal-chart {
     padding: 15px 9px 12px;

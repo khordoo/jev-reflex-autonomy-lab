@@ -8,6 +8,7 @@ export function planningRequest(context: PlanningContext, model: string) {
     model,
     stream: false,
     max_tokens: 2000,
+    reasoning: { effort: 'low' },
     provider: { require_parameters: true },
     messages: [
       {

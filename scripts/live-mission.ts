@@ -28,6 +28,10 @@ const controller = new Controller(
   new OpenRouterStrategyProvider(config.plannerModel),
 );
 const state = controller.state('drone_001');
+const gate = Number(process.env.REFLEX_CONFIDENCE_GATE || '0.7');
+if (!Number.isFinite(gate) || gate < 0.3 || gate > 0.99)
+  throw new Error('REFLEX_CONFIDENCE_GATE must be between 0.3 and 0.99');
+controller.threshold = gate;
 const started = performance.now();
 let previous = started,
   accumulator = 0,
@@ -58,7 +62,7 @@ await new Promise<void>((resolve) => {
       );
     }
     if (
-      world.time >= 45 ||
+      world.time >= 65 ||
       world.agents.drone_001.complete ||
       world.agents.drone_001.health <= 0 ||
       state.plannerError
@@ -79,6 +83,7 @@ const sortedLatencies = state.telemetry
   .map((e) => e.latencyMs)
   .sort((a, b) => a - b);
 const summary = {
+  threshold: gate,
   time: +world.time.toFixed(2),
   decisions: state.telemetry.length,
   confidenceMin: Math.min(...state.telemetry.map((e) => e.decision.confidence)),
@@ -94,7 +99,7 @@ const summary = {
 };
 mkdirSync('outputs', { recursive: true });
 writeFileSync(
-  'outputs/live-mission.json',
+  `outputs/live-mission-${Math.round(gate * 100)}.json`,
   JSON.stringify(
     {
       summary,

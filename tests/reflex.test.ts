@@ -10,6 +10,7 @@ import {
   chooseMockDecision,
 } from '../lib/reflex/providers';
 import { ACTIONS } from '../lib/reflex/types';
+import { actionProjections } from '../lib/reflex/action-projection';
 import type {
   PlanningContext,
   PlanningEvent,
@@ -35,6 +36,16 @@ test('seeded world is repeatable and one agent is instantiated', () => {
     createWorld('seeded', 124).objects,
   );
   assert.deepEqual(Object.keys(createWorld().agents), ['drone_001']);
+});
+test('physics projections omit ineffective actions without choosing a maneuver', () => {
+  const w = createWorld();
+  w.objects = [];
+  w.agents.drone_001.velocity = { x: 12, y: 0 };
+  const p = actionProjections(observe(w, 'drone_001'));
+  assert.equal('DECELERATE' in p, false);
+  assert.equal('SCAN' in p, false);
+  assert.ok('TURN_LEFT' in p && 'TURN_RIGHT' in p);
+  assert.equal(p.HOLD.destinationDistanceAfter2Seconds, 1376);
 });
 test('sensors measure geometry without mutating world or prescribing an action', () => {
   const w = createWorld();
@@ -108,7 +119,8 @@ test('hero policy encounters uncertainty, follows the mock plan and reaches dest
     if (d.confidence < 0.7) {
       uncertainty = true;
       planAt = Math.min(planAt, w.time + 2.4);
-    } else applyAction(w, 'drone_001', d.action);
+    }
+    applyAction(w, 'drone_001', d.action);
     for (let f = 0; f < 18; f++) stepWorld(w, 1 / 60);
   }
   assert.ok(uncertainty);
@@ -117,7 +129,11 @@ test('hero policy encounters uncertainty, follows the mock plan and reaches dest
     w.agents.drone_001.complete,
     JSON.stringify(w.agents.drone_001.position),
   );
-  assert.equal(w.agents.drone_001.collisions.length, 0);
+  assert.equal(
+    w.agents.drone_001.collisions.length,
+    0,
+    JSON.stringify(w.agents.drone_001.collisions),
+  );
 });
 test('controller escalates on confidence and does not escalate clear observations', async () => {
   const w = createWorld(),
@@ -134,7 +150,8 @@ test('controller escalates on confidence and does not escalate clear observation
   await new Promise((r) => setTimeout(r, 20));
   const s = c.state('drone_001');
   assert.equal(s.telemetry.at(-1)?.escalated, true);
-  assert.equal(s.telemetry.at(-1)?.executed, false);
+  assert.equal(s.telemetry.at(-1)?.executed, true);
+  assert.equal(s.telemetry.at(-1)?.provisional, true);
   assert.equal(s.strategy.revision, 1);
   c.dispose();
 });
@@ -167,6 +184,17 @@ test('invalid distributions are rejected', () => {
         ) as never,
       }),
     /Invalid/,
+  );
+});
+test('Jev receives current measurements and durable strategy, never stale planner narration', () => {
+  const context = planningFixture();
+  context.strategy.rationale = 'Old bearing was -0.44; turn left';
+  const request = jevRequest(context);
+  assert.equal('rationale' in request.state.strategy, false);
+  assert.deepEqual(request.state.observation, context.observation);
+  assert.equal(
+    request.state.strategy.preferredSide,
+    context.strategy.preferredSide,
   );
 });
 test('Jev confidence is preserved separately from selected probability', () => {

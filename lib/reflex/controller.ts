@@ -115,7 +115,7 @@ export class Controller {
     try {
       const decision = await this.bounded(
         (signal) => this.decisionProvider.decide(context, signal),
-        2000,
+        4000,
       );
       if (this.disposed || generation !== this.generation) return;
       validateDecision(decision);
@@ -125,10 +125,13 @@ export class Controller {
       s.latencyMs = decision.apiLatencyMs ?? performance.now() - start;
       s.history.push(observation);
       if (s.history.length > 80) s.history.shift();
-      const executed = decision.confidence >= this.threshold;
-      if (executed) applyAction(world, id, decision.action);
+      // The threshold routes uncertainty to strategy planning; it does not
+      // suspend the reflex loop while the slower planner is in flight.
+      const uncertain = decision.confidence < this.threshold;
+      const executed = true;
+      applyAction(world, id, decision.action);
       const escalated =
-        !executed && !s.planning && world.time - s.lastPlanAt >= 6;
+        uncertain && !s.planning && world.time - s.lastPlanAt >= 6;
       const event: TelemetryEvent = {
         timestamp: new Date().toISOString(),
         simulationTime: world.time,
@@ -139,6 +142,7 @@ export class Controller {
         provider: this.decisionProvider.name,
         threshold: this.threshold,
         executed,
+        provisional: uncertain,
         escalated,
         strategyBefore: strategy,
         strategyAfter: { ...s.strategy },
