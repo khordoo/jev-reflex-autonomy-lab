@@ -126,6 +126,52 @@ export function MissionCanvas({
           i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y),
         );
         ctx.stroke();
+        const px = d.position.x,
+          py = d.position.y,
+          destDistance = Math.hypot(dest.x - px, dest.y - py),
+          reach = Math.min(320, destDistance);
+        if (world.time > 0 && reach > 40) {
+          let turn =
+            Math.atan2(dest.y - py, dest.x - px) - d.heading;
+          turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+          turn = Math.max(-1.2, Math.min(1.2, turn));
+          const endAngle = d.heading + turn * 0.7,
+            midAngle = d.heading + turn * 0.25,
+            p0 = {
+              x: px + Math.cos(d.heading) * 22,
+              y: py + Math.sin(d.heading) * 22,
+            },
+            p1 = {
+              x: px + Math.cos(midAngle) * reach * 0.55,
+              y: py + Math.sin(midAngle) * reach * 0.55,
+            },
+            p2 = {
+              x: px + Math.cos(endAngle) * reach,
+              y: py + Math.sin(endAngle) * reach,
+            };
+          const intent = ctx.createLinearGradient(p0.x, p0.y, p2.x, p2.y);
+          intent.addColorStop(0, 'rgba(127,199,255,0.5)');
+          intent.addColorStop(0.5, 'rgba(127,199,255,0.24)');
+          intent.addColorStop(1, 'rgba(127,199,255,0)');
+          ctx.save();
+          ctx.lineCap = 'round';
+          ctx.shadowColor = '#7fc7ff';
+          ctx.shadowBlur = 10;
+          ctx.strokeStyle = intent;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          const steps = 28;
+          for (let i = 0; i <= steps; i++) {
+            const t = i / steps,
+              mt = 1 - t;
+            const x = mt * mt * p0.x + 2 * mt * t * p1.x + t * t * p2.x,
+              y = mt * mt * p0.y + 2 * mt * t * p1.y + t * t * p2.y;
+            if (i) ctx.lineTo(x, y);
+            else ctx.moveTo(x, y);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
         ctx.save();
         ctx.translate(d.position.x, d.position.y);
         ctx.rotate(d.heading);
