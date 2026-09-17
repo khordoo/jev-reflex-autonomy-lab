@@ -445,7 +445,7 @@ export const DecisionCharts = memo(function DecisionCharts({
           <span>
             {latestPlan?.latencyMs !== undefined
               ? `Last request: ${(latestPlan.latencyMs / 1000).toFixed(2)}s wall time`
-              : 'Requests begin below the gate or on a newly detected unknown.'}
+              : 'Requests begin when confidence falls below the gate.'}
           </span>
         </div>
       </section>

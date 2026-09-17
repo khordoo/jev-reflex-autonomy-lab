@@ -146,22 +146,7 @@ export class Controller {
       s.latencyMs = decision.apiLatencyMs ?? performance.now() - start;
       s.history.push(observation);
       if (s.history.length > 80) s.history.shift();
-      // Model confidence is only one uncertainty signal. A newly sensed
-      // UNKNOWN is epistemic novelty and must reach System 2 even when Jev is
-      // confident or an earlier, unrelated plan is inside its cooldown.
       const uncertain = decision.confidence < this.threshold;
-      const unknownIds = observation.detections
-        .filter((d) => d.classification === 'UNKNOWN')
-        .map((d) => d.id);
-      const novelUnknownIds = unknownIds.filter(
-        (unknownId) => !s.escalatedUnknownIds.includes(unknownId),
-      );
-      const hazardous = observation.detections.some(
-        (d) =>
-          d.timeToClosestApproach !== null &&
-          d.timeToClosestApproach > 0.1 &&
-          d.closestApproach < d.estimatedSize + strategy.safetyDistance,
-      );
       const executed = true;
       applyAction(world, id, decision.action);
       // Consume only the guidance used by this request; a newer plan may
@@ -175,12 +160,7 @@ export class Controller {
           revision: guidanceRevision,
         };
       }
-      const escalated =
-        !s.planning &&
-        !s.guidancePending &&
-        (novelUnknownIds.length > 0 ||
-          (uncertain && hazardous));
-      const needsStrategy = uncertain || novelUnknownIds.length > 0;
+      const escalated = !s.planning && !s.guidancePending && uncertain;
       const event: TelemetryEvent = {
         guidanceRevision,
         timestamp: new Date().toISOString(),
@@ -192,7 +172,7 @@ export class Controller {
         provider: this.decisionProvider.name,
         threshold: this.threshold,
         executed,
-        provisional: needsStrategy,
+        provisional: uncertain,
         escalated,
         strategyBefore: strategy,
         strategyAfter: { ...s.strategy },
@@ -201,7 +181,6 @@ export class Controller {
       s.telemetry.push(event);
       if (s.telemetry.length > 1500) s.telemetry.shift();
       if (escalated) {
-        s.escalatedUnknownIds.push(...novelUnknownIds);
         s.planning = true;
         s.plannerError = undefined;
         s.lastPlanAt = world.time;
@@ -214,8 +193,7 @@ export class Controller {
           startedAt: world.time,
           status: 'planning',
           triggerConfidence: decision.confidence,
-          trigger:
-            novelUnknownIds.length > 0 ? 'novel_unknown' : 'confidence',
+          trigger: 'confidence',
         };
         s.planningEvents.push(planningEvent);
         if (s.planningEvents.length > 200) s.planningEvents.shift();

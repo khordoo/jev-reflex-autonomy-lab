@@ -12,6 +12,8 @@ import {
 import { ACTIONS } from '../lib/reflex/types';
 import { actionProjections } from '../lib/reflex/action-projection';
 import type {
+  Decision,
+  DecisionProvider,
   PlanningContext,
   PlanningEvent,
   Strategy,
@@ -146,57 +148,132 @@ test('hero policy encounters uncertainty, follows the mock plan and reaches dest
     JSON.stringify(w.agents.drone_001.collisions),
   );
 });
-test('controller escalates on confidence and does not escalate clear observations', async () => {
-  const w = createWorld(),
-    c = new Controller(
-      new MockDecisionProvider(0),
-      new MockStrategyProvider(0),
-    );
-  c.tick(w);
-  await new Promise((r) => setTimeout(r, 10));
-  assert.equal(c.state('drone_001').telemetry[0].escalated, false);
-  w.time = 12;
-  w.agents.drone_001.position = { x: 720, y: 360 };
-  c.tick(w);
-  await new Promise((r) => setTimeout(r, 20));
-  const s = c.state('drone_001');
-  assert.equal(s.telemetry.at(-1)?.escalated, true);
-  assert.equal(s.telemetry.at(-1)?.executed, true);
-  assert.equal(s.telemetry.at(-1)?.provisional, true);
-  assert.equal(s.strategy.revision, 1);
-  c.dispose();
-});
-test('a newly detected unknown bypasses confidence and planner cooldown', async () => {
-  const w = createWorld();
-  w.time = 12;
-  w.agents.drone_001.position = { x: 720, y: 360 };
-  const confidentProvider = {
-    name: 'confident-test',
-    mode: 'mock' as const,
+function confidenceProvider(confidence: number): DecisionProvider {
+  const remaining = (1 - confidence) / (ACTIONS.length - 1);
+  return {
+    name: 'confidence-test',
+    mode: 'mock',
     async decide() {
       return {
-        action: 'HOLD' as const,
-        confidence: 0.9,
+        action: 'TURN_RIGHT',
+        confidence,
         probabilities: Object.fromEntries(
           ACTIONS.map((action) => [
             action,
-            action === 'HOLD' ? 0.9 : 0.1 / (ACTIONS.length - 1),
+            action === 'TURN_RIGHT' ? confidence : remaining,
           ]),
-        ) as Record<(typeof ACTIONS)[number], number>,
+        ) as Decision['probabilities'],
       };
     },
   };
-  const c = new Controller(confidentProvider, new MockStrategyProvider(0));
-  c.threshold = 0.3;
-  c.state('drone_001').lastPlanAt = 12;
+}
+
+async function tickOnce(c: Controller, w: ReturnType<typeof createWorld>) {
   c.tick(w);
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  await new Promise((r) => setTimeout(r, 20));
+  return c.state('drone_001').telemetry.at(-1);
+}
+
+test('system 2 activates below the 25% gate even with an empty scene', async () => {
+  const w = createWorld();
+  w.objects = [];
+  const c = new Controller(
+    confidenceProvider(0.24),
+    new MockStrategyProvider(0),
+  );
+  const event = await tickOnce(c, w);
+  assert.equal(event?.decision.confidence, 0.24);
+  assert.equal(event?.escalated, true);
+  assert.equal(event?.provisional, true);
+  assert.equal(event?.executed, true);
   const state = c.state('drone_001');
-  assert.equal(state.telemetry[0].decision.confidence, 0.9);
-  assert.equal(state.telemetry[0].escalated, true);
-  assert.equal(state.telemetry[0].provisional, true);
-  assert.equal(state.planningEvents[0].trigger, 'novel_unknown');
-  assert.deepEqual(state.escalatedUnknownIds, ['unknown_05']);
+  assert.equal(state.planningEvents.length, 1);
+  assert.equal(state.planningEvents[0].trigger, 'confidence');
+  assert.equal(state.planningEvents[0].triggerConfidence, 0.24);
+  c.dispose();
+});
+test('system 2 stays off at the 25% gate and for high confidence next to a large unknown', async () => {
+  const empty = createWorld();
+  empty.objects = [];
+  const boundary = new Controller(
+    confidenceProvider(0.25),
+    new MockStrategyProvider(0),
+  );
+  const boundaryEvent = await tickOnce(boundary, empty);
+  assert.equal(boundaryEvent?.decision.confidence, 0.25);
+  assert.equal(boundaryEvent?.escalated, false);
+  assert.equal(boundaryEvent?.provisional, false);
+  assert.equal(boundaryEvent?.executed, true);
+  assert.equal(boundary.state('drone_001').planningEvents.length, 0);
+  boundary.dispose();
+
+  const w = createWorld();
+  w.objects = [
+    {
+      id: 'large_unknown',
+      position: { x: 800, y: 360 },
+      velocity: { x: 0, y: 0 },
+      radius: 60,
+      kind: 'UNKNOWN',
+      signal: false,
+      activeAt: 0,
+    },
+  ];
+  const confident = new Controller(
+    confidenceProvider(0.9),
+    new MockStrategyProvider(0),
+  );
+  const unknownEvent = await tickOnce(confident, w);
+  assert.equal(unknownEvent?.decision.confidence, 0.9);
+  assert.equal(unknownEvent?.escalated, false);
+  assert.equal(unknownEvent?.provisional, false);
+  assert.equal(unknownEvent?.executed, true);
+  assert.equal(confident.state('drone_001').planningEvents.length, 0);
+  confident.dispose();
+});
+test('a plan runs once while pending and its guidance is consumed by one decision', async () => {
+  const w = createWorld();
+  w.objects = [];
+  let calls = 0;
+  let finish!: (strategy: Strategy) => void;
+  const planner = {
+    name: 'pending-test',
+    mode: 'mock' as const,
+    plan: () => {
+      calls++;
+      return new Promise<Strategy>((resolve) => {
+        finish = resolve;
+      });
+    },
+  };
+  const c = new Controller(confidenceProvider(0.1), planner);
+  await tickOnce(c, w);
+  const s = c.state('drone_001');
+  assert.equal(calls, 1);
+  assert.equal(s.planning, true);
+  assert.equal(s.planningEvents[0].status, 'planning');
+
+  w.time = 0.3;
+  const during = await tickOnce(c, w);
+  assert.equal(calls, 1);
+  assert.equal(during?.guidanceRevision, undefined);
+  assert.equal(s.planningEvents.length, 1);
+
+  w.time = 0.6;
+  finish({
+    agentId: 'drone_001',
+    mode: 'CAUTIOUS_BYPASS',
+    preferredSide: 'right',
+    safetyDistance: 60,
+    scanRequired: false,
+    rationale: 'One guidance consumption.',
+    revision: 1,
+  });
+  await new Promise((r) => setTimeout(r, 0));
+  const consumed = await tickOnce(c, w);
+  assert.equal(consumed?.guidanceRevision, 1);
+  assert.equal(s.guidancePending, false);
+  assert.equal(s.strategy.mode, 'TRANSIT');
   c.dispose();
 });
 test('live decisions resume immediately after the prior response', async () => {
@@ -593,8 +670,7 @@ for (const recoverableStatus of [429, 500, 503, 529])
       DEFAULT_PLANNER_MODEL,
       new AbortController().signal,
       async (_url, init) => {
-        const body = init?.body;
-        assert.equal(typeof body, 'string');
+        const body = init?.body as string;
         models.push(JSON.parse(body).model);
         if (models.length === 1)
           return new Response('{}', { status: recoverableStatus });
@@ -627,7 +703,7 @@ test('controller records planner start and completion at actual simulation times
         finish = resolve;
       }),
   };
-  const c = new Controller(new MockDecisionProvider(0), planner);
+  const c = new Controller(confidenceProvider(0.2), planner);
   c.tick(w);
   await new Promise((r) => setTimeout(r, 10));
   const s = c.state('drone_001');

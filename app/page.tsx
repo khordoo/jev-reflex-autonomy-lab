@@ -551,8 +551,8 @@ export default function Home() {
             onValueChange={(v) => setThreshold(Array.isArray(v) ? v[0] : v)}
           />
           <p>
-            Low confidence near a projected hazard, or a newly detected unknown,
-            requests a strategy.
+            Confidence below the threshold alone requests a strategy,
+            regardless of the objects present.
           </p>
           <div className="setting-row">
             <label htmlFor="provider">Decision provider</label>
