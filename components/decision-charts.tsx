@@ -1,4 +1,5 @@
 'use client';
+import { memo } from 'react';
 import {
   Area,
   AreaChart,
@@ -19,7 +20,7 @@ import {
 } from '@/lib/reflex/chart-data';
 import type { PlanningEvent, TelemetryEvent } from '@/lib/reflex/types';
 
-export function DecisionCharts({
+export const DecisionCharts = memo(function DecisionCharts({
   events,
   planningEvents,
   failures,
@@ -486,4 +487,4 @@ export function DecisionCharts({
       )}
     </div>
   );
-}
+});

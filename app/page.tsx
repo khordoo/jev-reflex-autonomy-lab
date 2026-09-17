@@ -31,23 +31,6 @@ import { createWorld, stepWorld } from '@/lib/reflex/world';
 import type { World } from '@/lib/reflex/types';
 import { browserRegistry, registerMissionTools } from '@/lib/reflex/webmcp';
 
-type FlightTraceSample = {
-  timestamp: string;
-  simulationTime: number;
-  frameDeltaMs: number;
-  longFrame: boolean;
-  position: { x: number; y: number };
-  velocity: { x: number; y: number };
-  speed: number;
-  heading: number;
-  action: string | null;
-  confidence: number | null;
-  apiLatencyMs: number | null;
-  decisionPending: boolean;
-  system2Planning: boolean;
-  decisionCount: number;
-};
-
 export default function Home() {
   const [world, setWorld] = useState(() => createWorld());
   const [controller, setController] = useState(
@@ -66,6 +49,7 @@ export default function Home() {
     plannerModel: 'meta/muse-spark-1.3-contributor',
   });
   const [configError, setConfigError] = useState(false);
+  const [chartTime, setChartTime] = useState(0);
   async function checkProviders() {
     try {
       const response = await fetch('/api/providers');
@@ -82,8 +66,6 @@ export default function Home() {
   }, []);
   const [, refresh] = useState(0);
   const runningRef = useRef(false);
-  const flightTrace = useRef<FlightTraceSample[]>([]);
-  const traceStartedAt = useRef(new Date().toISOString());
   runningRef.current = running;
   const control = controller.state('drone_001'),
     drone = world.agents.drone_001,
@@ -130,10 +112,9 @@ export default function Home() {
       previous = performance.now(),
       accumulated = 0,
       lastUI = 0,
-      lastTrace = 0;
+      lastChart = 0;
     const loop = (now: number) => {
-      const frameDeltaMs = now - previous;
-      const delta = Math.min(frameDeltaMs / 1000, 0.1);
+      const delta = Math.min((now - previous) / 1000, 0.1);
       previous = now;
       if (runningRef.current) {
         accumulated += delta;
@@ -142,35 +123,20 @@ export default function Home() {
           accumulated -= 1 / 60;
         }
         controller.tick(world);
-        if (now - lastTrace >= 100 || frameDeltaMs >= 100) {
-          const current = controller.state('drone_001');
-          const vehicle = world.agents.drone_001;
-          flightTrace.current.push({
-            timestamp: new Date(performance.timeOrigin + now).toISOString(),
-            simulationTime: world.time,
-            frameDeltaMs,
-            longFrame: frameDeltaMs >= 100,
-            position: { ...vehicle.position },
-            velocity: { ...vehicle.velocity },
-            speed: Math.hypot(vehicle.velocity.x, vehicle.velocity.y),
-            heading: vehicle.heading,
-            action: current.decision?.action ?? null,
-            confidence: current.decision?.confidence ?? null,
-            apiLatencyMs: current.decision?.apiLatencyMs ?? null,
-            decisionPending: current.decisionPending,
-            system2Planning: current.planning,
-            decisionCount: current.telemetry.length,
-          });
-          lastTrace = now;
+        if (now - lastChart >= 1000) {
+          setChartTime(world.time);
+          lastChart = now;
         }
         if (
           Object.values(world.agents).every(
             (d) => d.complete || d.health <= 0 || d.battery <= 0,
           )
-        )
+        ) {
+          setChartTime(world.time);
           setRunning(false);
+        }
       }
-      if (now - lastUI > 80) {
+      if (now - lastUI >= 250) {
         refresh((n) => n + 1);
         lastUI = now;
       }
@@ -189,8 +155,7 @@ export default function Home() {
   ) {
     controller.dispose();
     setRunning(false);
-    flightTrace.current = [];
-    traceStartedAt.current = new Date().toISOString();
+    setChartTime(0);
     setWorld(createWorld(scenario, seed));
     const next = new Controller(
       provider === 'mock'
@@ -208,7 +173,7 @@ export default function Home() {
       [
         JSON.stringify(
           {
-            version: 2,
+            version: 1,
             scenario: world.scenario,
             seed: world.seed,
             mode,
@@ -218,13 +183,6 @@ export default function Home() {
             events,
             planningEvents: control.planningEvents,
             failures: controller.failures,
-            flightTrace: {
-              startedAt: traceStartedAt.current,
-              exportedAt: new Date().toISOString(),
-              sampleIntervalMs: 100,
-              longFrameThresholdMs: 100,
-              samples: flightTrace.current,
-            },
           },
           null,
           2,
@@ -571,7 +529,7 @@ export default function Home() {
             events={events}
             planningEvents={control.planningEvents}
             failures={controller.failures}
-            time={world.time}
+            time={chartTime}
             agentId={drone.id}
             decisionMode={controller.decisionProvider.mode}
             plannerMode={controller.planner.mode}
