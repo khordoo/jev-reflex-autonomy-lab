@@ -1,21 +1,107 @@
-# Reflex — autonomous drone lab
+# Jev Reflex Autonomy Lab
 
-Run `npm install`, then `npm run dev`. Open the printed local URL and launch the mission. `npm run build` creates the production Worker. `npx tsc --noEmit` checks types.
+An interactive multi-drone autonomy simulation powered by [TypeSafe Jev](https://docs.typesafe.ai/), exploring a simple question: what happens when fast, typed System 1 reflexes can ask a slower System 2 reasoning model for advice without giving up control?
 
-The demo starts with explicit development mocks. Choose TypeSafe Jev and OpenRouter independently in Experiment controls to use real providers. Mock call times are measured wall-clock durations including intentional simulation delays; synthetic values stay labeled. Neither live provider silently falls back to a mock.
+<p align="center">
+  <img src="docs/images/reflex-dashboard.png" alt="Reflex Autonomy Lab dashboard showing multiple autonomous drones navigating a dynamic obstacle field" width="100%" />
+</p>
 
-The Jev adapter behind `/api/decision` follows the official quickstart/API reference inspected on 2026-09-16: https://docs.typesafe.ai/introduction/quickstart and https://docs.typesafe.ai/api. It uses `POST https://api.typesafe.ai/v1/systemone`, Bearer authentication, `jev-latest`, and a Choice question over the seven actions. Reported confidence is preserved independently of selected-action probability.
+Each drone navigates independently with Jev as its System 1 reflex layer. When confidence falls below the configured threshold, an optional System 2 planner provides one-use strategic guidance through [OpenRouter](https://openrouter.ai/). Jev keeps steering while the planner responds.
 
-System 2 calls OpenRouter's OpenAI-compatible `/api/v1/chat/completions` API with `z-ai/glm-5.3`, strict JSON schema and runtime validation. The planner updates strategy only. Rate limits and server errors retry once with `meta/muse-spark-1.3-contributor`. Documentation: https://openrouter.ai/docs/api_reference/overview and https://openrouter.ai/docs/guides/features/structured-outputs. A different primary model can be configured with `OPENROUTER_MODEL`.
+## What the demo shows
 
-For local live calls, copy `.dev.vars.example` to `.dev.vars` and fill `TYPESAFE_API_KEY` and `OPENROUTER_API_KEY`. Restart the dev server after editing, then use Refresh connection status. `.dev.vars` is ignored by Git. Never use `NEXT_PUBLIC_` variables for credentials. Hosted environments require separate runtime secrets; local credentials are not copied to deployments. The contributor model may require OpenRouter account confirmation before it can run.
+- One to twenty independently controlled drones in the same dynamic airspace
+- Moving asteroids, debris, unknown signals, and other drones treated as sensed contacts
+- A switch for running Jev alone or enabling System 2 advice
+- Per-drone decisions, confidence, latency, strategy revisions, and collision outcomes
+- Seeded scenarios for repeatable obstacle layouts
+- Canvas rendering separated from React telemetry and controls
+- JSON export for inspecting an entire mission after the run
 
-Decision history contains two aligned charts: raw returned confidence with the gate recorded at each decision, and actual planner activity intervals with strategy completion/failure markers. Both use simulation time, while planner durations retain measured wall time. Provider failures create gaps in the confidence curve; values are never filled in from the scenario. Pausing freezes physics; an already pending request can finish while paused.
+If one drone collides, only that drone is removed. The remaining fleet continues toward the shared destination. Arrived drones leave the active flight lane.
 
-The hero scenario is scripted; seeded field generation is repeatable. Actual provider latency affects trajectories, so a seed alone does not guarantee identical asynchronous replay. Export includes initial seed, final world, per-agent observations, probabilities, action gate results, measured call times, strategy revisions and planner timing. Decision outcomes are snapshots at execution; final physics outcomes are in exported world state. History is bounded in memory; reset clears it. Browser background throttling slows simulation time.
+## Architecture
 
-Tests: `npx esbuild tests/reflex.test.ts --bundle --platform=node --format=esm --outfile=/tmp/reflex-tests.mjs && node --test /tmp/reflex-tests.mjs`.
+```text
+React dashboard
+├── experiment controls
+├── per-drone telemetry
+└── decision and latency charts
 
-Explicit live smoke test (one request per provider): `npx esbuild scripts/live-smoke.ts --bundle --platform=node --format=esm --outfile=/tmp/reflex-live-smoke.mjs && node /tmp/reflex-live-smoke.mjs`. Initial live Jev test returned TURN_RIGHT with confidence 0.33, selected-action probability 0.43, and API time 387 ms. This is one observation, not a latency benchmark. See `LIVE-VALIDATION.md` for subsequent results.
+Canvas simulation loop
+├── movement and collision detection
+├── sensors and action projections
+└── fleet rendering
 
-The optional WebMCP integration exposes `read_mission_status` and `set_mission_running` when supported. No compatible browser tool invocation context was available to validate it; this is not a claim of tested browser support. UI browser testing was not performed. Core tests, TypeScript validation, route smoke checks and the production build are the verified checks.
+System 1 — TypeSafe Jev
+└── fast typed action decisions for every active drone
+
+System 2 — OpenRouter / GLM 5.3
+└── asynchronous one-use strategy advice when confidence is low
+```
+
+System 2 is advisory. It does not fly the drone directly, and Jev does not pause while waiting for it. The confidence chart uses purple only for a Jev decision that actually consumed returned System 2 guidance. The System 2 chart marks response arrival as a discrete event; wall-clock duration is shown separately in the latency chart.
+
+## Run locally
+
+Requirements: Node.js 22.13 or newer.
+
+```bash
+npm install
+npm run dev
+```
+
+Open the printed local URL. The app starts with development mocks, so it works without provider credentials.
+
+Useful checks:
+
+```bash
+npx tsc --noEmit
+npm run lint
+npm run build
+```
+
+## Use live providers
+
+Copy the example configuration and add your own keys:
+
+```bash
+cp .dev.vars.example .dev.vars
+```
+
+```dotenv
+TYPESAFE_API_KEY=your_key
+OPENROUTER_API_KEY=your_key
+OPENROUTER_MODEL=z-ai/glm-5.3
+```
+
+Restart the development server, refresh provider status in the dashboard, and select TypeSafe Jev and OpenRouter. `.dev.vars` is ignored by Git; never expose these credentials through `NEXT_PUBLIC_` variables.
+
+The Jev adapter calls `POST https://api.typesafe.ai/v1/systemone` with `jev-latest` and a typed choice over the available flight actions. The System 2 planner uses OpenRouter's chat completions API with strict structured output. Server errors, rate limits, and context-size failures can retry through the configured fallback model.
+
+## Experiment workflow
+
+1. Choose the fleet size and scenario.
+2. Turn System 2 advice on or off.
+3. Select mock or live providers.
+4. Adjust the confidence threshold.
+5. Launch the mission and switch between drones to inspect their decisions.
+6. Export the mission JSON for deeper analysis.
+
+The scenario seed controls the obstacle layout, but live provider latency can still change a trajectory. A seed is repeatable geometry, not a deterministic asynchronous replay.
+
+## Telemetry semantics
+
+- Green confidence: Jev made the decision using its current local context.
+- Purple confidence point: that Jev decision consumed newly returned System 2 guidance.
+- Purple System 2 bar: advisory response arrived at that mission time.
+- Red System 2 bar: advisory request failed.
+- Latency chart: measured wall-clock provider response time.
+
+Exported telemetry includes the seed, fleet state, observations, probabilities, executed actions, confidence thresholds, provider timing, planner revisions, failures, and final outcomes.
+
+## Project status
+
+This is an experimental autonomy visualization, not a production flight controller. The mock scenario and focused runtime checks cover the core simulation behavior. Live fleet success varies with model decisions, provider latency, seed, threshold, and fleet size.
+
+See [LIVE-VALIDATION.md](LIVE-VALIDATION.md) for recorded provider experiments and [HANDOFF.md](HANDOFF.md) for implementation notes.
