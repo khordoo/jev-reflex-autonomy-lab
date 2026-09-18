@@ -47,9 +47,6 @@ export function MissionCanvas({
         ctx.lineTo(1600, y);
       }
       ctx.stroke();
-      ctx.font = '18px monospace';
-      ctx.fillStyle = '#547080';
-      ctx.fillText('SECTOR 07 / ORION CORRIDOR', 28, 40);
       const dest = world.destination;
       ctx.strokeStyle = '#b4f574';
       ctx.setLineDash([6, 7]);

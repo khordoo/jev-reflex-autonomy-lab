@@ -53,12 +53,12 @@ test('seeded world is repeatable and one agent is instantiated', () => {
 test('physics projections omit ineffective actions without choosing a maneuver', () => {
   const w = createWorld();
   w.objects = [];
-  w.agents.drone_001.velocity = { x: 12, y: 0 };
+  w.agents.drone_001.velocity = { x: 0, y: 0 };
   const p = actionProjections(observe(w, 'drone_001'));
   assert.equal('DECELERATE' in p, false);
   assert.equal('SCAN' in p, false);
   assert.ok('TURN_LEFT' in p && 'TURN_RIGHT' in p);
-  assert.equal(p.HOLD.destinationDistanceAfter2Seconds, 1376);
+  assert.equal(p.HOLD.destinationDistanceAfter2Seconds, 1388);
 });
 test('sensors measure geometry without mutating world or prescribing an action', () => {
   const w = createWorld();

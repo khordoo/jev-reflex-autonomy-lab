@@ -332,27 +332,6 @@ canvas {
   height: 100%;
   position: absolute;
 }
-.map-caption {
-  position: absolute;
-  top: 23px;
-  left: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  pointer-events: none;
-}
-.map-caption .eyebrow {
-  font-size: 11px;
-  margin: 0;
-}
-.map-caption strong {
-  font-size: 17px;
-  font-weight: 450;
-}
-.map-caption > span:last-child {
-  color: #708999;
-  font-size: 12px;
-}
 .map-key {
   position: absolute;
   left: 22px;
@@ -921,13 +900,6 @@ footer {
     height: 330px;
     min-height: 330px;
   }
-  .map-caption strong {
-    font-size: 14px;
-  }
-  .map-caption {
-    left: 15px;
-    top: 16px;
-  }
   .flight-stats {
     grid-template-columns: repeat(3, 1fr);
     gap: 19px;
@@ -976,22 +948,23 @@ footer {
 }
 
 .decision-charts {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
-}
-.latency-chart {
-  order: 2;
-}
-.chart-empty {
-  order: 4;
+  flex: 1;
+  min-height: 0;
 }
 .signal-chart {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   border: 1px solid #263946;
   border-radius: 8px;
   background: #0c161f;
   overflow: hidden;
   padding: 18px 18px 12px;
   min-width: 0;
+  min-height: 0;
 }
 .chart-heading {
   display: flex;
@@ -1040,7 +1013,9 @@ footer {
 }
 .signal-chart-canvas {
   width: 100%;
-  height: 190px;
+  flex: 1;
+  min-height: 190px;
+  height: auto;
   aspect-ratio: auto;
   margin-top: 4px;
 }
@@ -1052,6 +1027,7 @@ footer {
   color: #88a0af;
   font-size: 12px;
   margin-top: 4px;
+  flex: none;
 }
 .chart-empty {
   font-size: 14px;
@@ -1092,6 +1068,8 @@ footer {
 }
 .lower-grid > .telemetry {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 .live-preset {
   width: 100%;
@@ -1107,7 +1085,7 @@ footer {
     font-size: 22px;
   }
   .signal-chart-canvas {
-    height: 180px;
+    min-height: 180px;
   }
   .chart-legend {
     font-size: 12px;

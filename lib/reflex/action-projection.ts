@@ -1,12 +1,21 @@
 import { ACTIONS, type Action, type Observation } from './types';
-import { ARRIVAL_RADIUS } from './world';
+import {
+  ACCELERATION_STEP,
+  ARRIVAL_RADIUS,
+  CRUISE_SPEED,
+  DECELERATION_STEP,
+  MAX_SPEED,
+  MIN_SPEED,
+  RETREAT_SPEED,
+  TURN_RATE,
+} from './world';
 // Neutral physics counterfactuals, not action scores, rankings or recommendations.
 // Only sensed geometry is used. x is forward; y is right in the observer frame.
 export function actionProjections(o: Observation) {
   const available = ACTIONS.filter(
     (a) =>
-      !(a === 'DECELERATE' && o.speed <= 12.01) &&
-      !(a === 'ACCELERATE' && o.speed >= 64.99) &&
+      !(a === 'DECELERATE' && o.speed <= MIN_SPEED + 0.01) &&
+      !(a === 'ACCELERATE' && o.speed >= MAX_SPEED - 0.01) &&
       !(
         a === 'SCAN' &&
         !o.detections.some((d) => d.classification === 'UNKNOWN')
@@ -16,20 +25,24 @@ export function actionProjections(o: Observation) {
     available.map((action: Action) => {
       const angle =
         action === 'TURN_LEFT'
-          ? -0.22
+          ? -TURN_RATE
           : action === 'TURN_RIGHT'
-            ? 0.22
+            ? TURN_RATE
             : action === 'RETREAT'
               ? Math.PI
               : 0;
       const speed =
         action === 'ACCELERATE'
-          ? Math.min(65, o.speed + 5)
+          ? Math.min(MAX_SPEED, o.speed + ACCELERATION_STEP)
           : action === 'DECELERATE'
-            ? Math.max(12, o.speed - 7)
+            ? Math.max(MIN_SPEED, o.speed - DECELERATION_STEP)
             : action === 'RETREAT'
-              ? 20
-              : o.speed;
+              ? RETREAT_SPEED
+              : action === 'HOLD'
+                ? o.speed < CRUISE_SPEED
+                  ? Math.min(CRUISE_SPEED, o.speed + ACCELERATION_STEP)
+                  : Math.max(CRUISE_SPEED, o.speed - ACCELERATION_STEP)
+                : o.speed;
       const dx = Math.cos(angle) * speed,
         dy = Math.sin(angle) * speed;
       const goalX = o.destinationDistance * Math.cos(o.destinationBearing);

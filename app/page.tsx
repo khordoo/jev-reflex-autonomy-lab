@@ -254,7 +254,7 @@ export default function Home() {
           <div className="panel-bar">
             <div>
               <span className="status-dot" /> LIVE ENVIRONMENT{' '}
-              <span className="muted">/ SECTOR 07</span>
+              <span className="muted">/ SECTOR 07 / ORION CORRIDOR</span>
             </div>
             <span className="mono">
               T + {world.time.toFixed(1).padStart(5, '0')}s
@@ -262,11 +262,6 @@ export default function Home() {
           </div>
           <div className="map">
             <MissionCanvas world={world} sensors={sensors} />
-            <div className="map-caption">
-              <span className="eyebrow">MISSION 001</span>
-              <strong>Navigate the Orion corridor</strong>
-              <span>Reach the destination. Preserve the drone.</span>
-            </div>
             <div className="map-key">
               <span>◉ DRONE</span>
               <span>○ OBJECT</span>
@@ -505,7 +500,7 @@ export default function Home() {
           <Slider
             aria-labelledby="threshold-label"
             value={[threshold]}
-            min={30}
+            min={5}
             max={99}
             step={1}
             onValueChange={(v) => setThreshold(Array.isArray(v) ? v[0] : v)}

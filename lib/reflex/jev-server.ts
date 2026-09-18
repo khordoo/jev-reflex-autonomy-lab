@@ -1,6 +1,14 @@
 import { ACTIONS, type Decision, type DecisionContext } from './types';
 import { validateDecision } from './validation';
 import { actionProjections } from './action-projection';
+import {
+  ACCELERATION_STEP,
+  CRUISE_SPEED,
+  DECELERATION_STEP,
+  MAX_SPEED,
+  MIN_SPEED,
+  RETREAT_SPEED,
+} from './world';
 // Verified 2026-09-16: https://docs.typesafe.ai/introduction/quickstart and /api.
 export function jevRequest(context: DecisionContext) {
   const projections = actionProjections(context.observation);
@@ -75,7 +83,7 @@ export function jevRequest(context: DecisionContext) {
         },
         criteria: {
           HOLD: {
-            effect: 'Maintain current heading and speed.',
+            effect: `Maintain heading while returning speed toward the ${CRUISE_SPEED} m/s cruise (speeds up if slower, slows down if faster).`,
             choose_when:
               'Aligned with destination and all clearances are safe.',
             reject_when: 'Any projected path has inadequate clearance.',
@@ -99,12 +107,12 @@ export function jevRequest(context: DecisionContext) {
               'The target is left and turning right does not improve obstacle clearance.',
           },
           ACCELERATE: {
-            effect: 'Increase speed by 5 m/s, capped at 65 m/s.',
+            effect: `Increase speed by ${ACCELERATION_STEP} m/s, capped at ${MAX_SPEED} m/s.`,
             choose_when: 'Route is clear and added speed improves progress.',
             reject_when: 'Added speed reduces safety margin.',
           },
           DECELERATE: {
-            effect: 'Decrease speed by 7 m/s, floored at 12 m/s.',
+            effect: `Decrease speed by ${DECELERATION_STEP} m/s, floored at ${MIN_SPEED} m/s.`,
             choose_when:
               'No available turn has safe clearance or more reaction time is required.',
             reject_when:
@@ -119,7 +127,7 @@ export function jevRequest(context: DecisionContext) {
               'An immediate maneuver is required to avoid collision.',
           },
           RETREAT: {
-            effect: 'Reverse heading and set speed to 20 m/s.',
+            effect: `Reverse thrust: hold heading and back away at ${RETREAT_SPEED} m/s.`,
             choose_when:
               'Every available forward action predicts collision; use only as an emergency escape.',
             reject_when:

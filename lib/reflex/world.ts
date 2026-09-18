@@ -1,5 +1,12 @@
 import type { Action, Drone, World } from './types';
 export const ARRIVAL_RADIUS = 35;
+export const TURN_RATE = 0.22;
+export const CRUISE_SPEED = 52;
+export const MIN_SPEED = 16;
+export const MAX_SPEED = 90;
+export const ACCELERATION_STEP = 6;
+export const DECELERATION_STEP = 10;
+export const RETREAT_SPEED = 26;
 export const wrapAngle = (n: number) => Math.atan2(Math.sin(n), Math.cos(n));
 export function seeded(seed: number) {
   let n = seed >>> 0;
@@ -22,7 +29,7 @@ export function createWorld(
       drone_001: {
         id: 'drone_001',
         position: { x: 100, y: 360 },
-        velocity: { x: 52, y: 0 },
+        velocity: { x: CRUISE_SPEED, y: 0 },
         heading: 0,
         health: 100,
         battery: 100,
@@ -110,18 +117,26 @@ export function applyAction(world: World, agentId: string, action: Action) {
   const d = world.agents[agentId];
   if (!d || d.complete || d.health <= 0) return;
   let speed = Math.hypot(d.velocity.x, d.velocity.y);
-  if (action === 'TURN_LEFT') d.heading -= 0.22;
-  if (action === 'TURN_RIGHT') d.heading += 0.22;
-  if (action === 'ACCELERATE') speed = Math.min(90, speed + 6);
-  if (action === 'DECELERATE') speed = Math.max(16, speed - 8);
+  let direction = 1;
+  if (action === 'TURN_LEFT') d.heading -= TURN_RATE;
+  if (action === 'TURN_RIGHT') d.heading += TURN_RATE;
+  if (action === 'ACCELERATE')
+    speed = Math.min(MAX_SPEED, speed + ACCELERATION_STEP);
+  if (action === 'DECELERATE')
+    speed = Math.max(MIN_SPEED, speed - DECELERATION_STEP);
+  if (action === 'HOLD')
+    speed =
+      speed < CRUISE_SPEED
+        ? Math.min(CRUISE_SPEED, speed + ACCELERATION_STEP)
+        : Math.max(CRUISE_SPEED, speed - ACCELERATION_STEP);
   if (action === 'RETREAT') {
-    d.heading += Math.PI;
-    speed = 26;
+    speed = RETREAT_SPEED;
+    direction = -1;
   }
   d.heading = wrapAngle(d.heading);
   d.velocity = {
-    x: Math.cos(d.heading) * speed,
-    y: Math.sin(d.heading) * speed,
+    x: Math.cos(d.heading) * speed * direction,
+    y: Math.sin(d.heading) * speed * direction,
   };
   if (action === 'SCAN')
     for (const o of world.objects)
