@@ -69,6 +69,8 @@ export function jevRequest(context: DecisionContext) {
           },
           progress_policy:
             'Prefer forward motion toward the destination whenever any forward action is collision-free. Once clearance is adequate, prioritize destination progress. Do not keep braking when a safe turn makes progress.',
+          traffic_policy:
+            'DRONE contacts are other moving aircraft. Avoid them using their relative velocities and projected clearance just like obstacles: every DRONE contact must clear by a safe margin, including parallel or co-speed aircraft, so treat them as blocks requiring separation rather than background traffic. For a head-on encounter prefer TURN_RIGHT when safe; when overtaking, yield or slow down if passing is unsafe. Arrived drones are docked and leave the active flight lane.',
           arrival_policy:
             'Prefer an action with reachesDestination=true when its contacts and boundary clearances are safe. Do not turn away from a safe arrival to maximize clearance from a distant or receding object. Compare hazards only within each action projection horizon.',
           coordinate_convention: {

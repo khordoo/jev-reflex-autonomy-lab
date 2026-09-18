@@ -7,6 +7,7 @@ import {
   Pause,
   Play,
   Radar,
+  Route,
   RotateCcw,
   Zap,
 } from 'lucide-react';
@@ -34,13 +35,17 @@ import { browserRegistry, registerMissionTools } from '@/lib/reflex/webmcp';
 const INITIAL_DESTINATION_DISTANCE = 1400;
 
 export default function Home() {
-  const [world, setWorld] = useState(() => createWorld());
+  const [droneCount, setDroneCount] = useState(3);
+  const [system2Enabled, setSystem2Enabled] = useState(true);
+  const [selectedAgent, setSelectedAgent] = useState('D_01');
+  const [world, setWorld] = useState(() => createWorld('hero', 42, 3));
   const [controller, setController] = useState(
     () =>
       new Controller(new MockDecisionProvider(), new MockStrategyProvider()),
   );
   const [running, setRunning] = useState(false),
     [sensors, setSensors] = useState(true),
+    [showTrails, setShowTrails] = useState(true),
     [threshold, setThreshold] = useState(20),
     [mode, setMode] = useState('mock'),
     [plannerMode, setPlannerMode] = useState('mock'),
@@ -69,8 +74,12 @@ export default function Home() {
   const [, refresh] = useState(0);
   const runningRef = useRef(false);
   runningRef.current = running;
-  const control = controller.state('drone_001'),
-    drone = world.agents.drone_001,
+  const drones = Object.values(world.agents);
+  const arrived = drones.filter((d) => d.complete).length;
+  const lost = drones.filter((d) => d.health <= 0 || (!d.complete && d.battery <= 0)).length;
+  const finished = arrived + lost === drones.length;
+  const control = controller.state(selectedAgent),
+    drone = world.agents[selectedAgent] ?? drones[0],
     events = control.telemetry;
   const api = useRef({
     read: () => ({}),
@@ -86,9 +95,11 @@ export default function Home() {
       strategy: control.strategy,
       health: drone.health,
       complete: drone.complete,
+      system2Enabled,
+      agents: drones.map((d) => ({ id: d.id, health: d.health, complete: d.complete, position: d.position })),
     }),
     run: async (value) => {
-      if (value && (drone.complete || drone.health <= 0 || drone.battery <= 0))
+      if (value && finished)
         throw new Error('Reset the finished mission first');
       setRunning(value);
       await new Promise<void>((resolve) =>
@@ -155,11 +166,14 @@ export default function Home() {
     provider = mode,
     planner = plannerMode,
     nextSeed = seed,
+    nextCount = droneCount,
+    nextSystem2 = system2Enabled,
   ) {
     controller.dispose();
     setRunning(false);
     setChartTime(0);
-    setWorld(createWorld(scenario, nextSeed));
+    setSelectedAgent('D_01');
+    setWorld(createWorld(scenario, nextSeed, nextCount));
     const next = new Controller(
       provider === 'mock'
         ? new MockDecisionProvider()
@@ -169,6 +183,7 @@ export default function Home() {
         : new OpenRouterStrategyProvider(providerConfig.plannerModel),
     );
     next.threshold = threshold / 100;
+    next.system2Enabled = nextSystem2;
     setController(next);
   }
   function download() {
@@ -176,15 +191,17 @@ export default function Home() {
       [
         JSON.stringify(
           {
-            version: 1,
+            version: 3,
             scenario: world.scenario,
             seed: world.seed,
             mode,
             plannerMode,
             threshold,
+            droneCount: drones.length,
+            system2Enabled,
             world,
-            events,
-            planningEvents: control.planningEvents,
+            events: Object.values(controller.agents).flatMap((agent) => agent.telemetry).sort((a, b) => a.simulationTime - b.simulationTime),
+            planningEvents: Object.values(controller.agents).flatMap((agent) => agent.planningEvents).sort((a, b) => a.startedAt - b.startedAt),
             failures: controller.failures,
           },
           null,
@@ -224,7 +241,7 @@ export default function Home() {
           <span className="lab-label">AUTONOMY LAB</span>
         </div>
         <div className="top-meta">
-          <span className="status-dot" /> SINGLE AGENT EXPERIMENT{' '}
+          <span className="status-dot" /> {drones.length} DRONE EXPERIMENT{' '}
           <span className="version">PHASE 01</span>
         </div>
       </header>
@@ -245,7 +262,7 @@ export default function Home() {
               : 'MIXED PROVIDERS'}
           <small>
             {mode === 'mock' ? 'Mock reflexes' : 'TypeSafe Jev'} ·{' '}
-            {plannerMode === 'mock' ? 'mock planner' : 'GLM 5.3 planner'}
+            {!system2Enabled ? 'System 2 off' : plannerMode === 'mock' ? 'mock planner' : 'GLM 5.3 planner'}
           </small>
         </div>
       </section>
@@ -261,9 +278,13 @@ export default function Home() {
             </span>
           </div>
           <div className="map">
-            <MissionCanvas world={world} sensors={sensors} />
+            <MissionCanvas world={world} sensors={sensors} showTrails={showTrails} />
             <div className="map-key">
-              <span>◉ DRONE</span>
+              <span>
+                <svg viewBox="-14 -12 35 24" aria-hidden="true">
+                  <polygon points="21,0 -14,-12 -7,0 -14,12" fill="currentColor" />
+                </svg> DRONE
+              </span>
               <span>○ OBJECT</span>
               <span>⌁ SENSOR LINK</span>
             </div>
@@ -275,21 +296,24 @@ export default function Home() {
                 </div>
               </div>
             )}
-            {drone.complete && (
+            {finished && arrived > 0 && (
               <div className="escalation-banner success">
-                <strong>MISSION COMPLETE · {drone.health}% INTEGRITY</strong>
+                <strong>MISSION FINISHED · {arrived}/{drones.length} ARRIVED · {lost} LOST</strong>
               </div>
             )}
-            {drone.health <= 0 && (
+            {finished && arrived === 0 && (
               <div className="escalation-banner failure">
-                <strong>MISSION FAILED · CRITICAL IMPACT</strong>
+                <strong>MISSION FINISHED · ALL DRONES LOST</strong>
               </div>
             )}
           </div>
           <div className="flight-stats">
             <div>
               <span>AGENT</span>
-              <strong>drone_001</strong>
+              <select aria-label="Selected drone" value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)}>
+                {drones.map((d) => <option key={d.id} value={d.id}>{d.id} · {d.complete ? 'Arrived' : d.health <= 0 ? 'Lost' : d.battery <= 0 ? 'Out of battery' : 'Active'}</option>)}
+              </select>
+              <small>{arrived} arrived · {drones.length - arrived - lost} active · {lost} lost</small>
             </div>
             <div>
               <span>VELOCITY</span>
@@ -312,7 +336,7 @@ export default function Home() {
             <button
               className="primary-button"
               onClick={() => setRunning((v) => !v)}
-              disabled={drone.complete || drone.health <= 0}
+              disabled={finished}
             >
               {running ? <Pause size={16} /> : <Play size={16} />}
               {running
@@ -334,6 +358,13 @@ export default function Home() {
               onClick={() => setSensors((v) => !v)}
             >
               <Radar size={17} /> Sensors
+            </button>
+            <button
+              className={'text-button ' + (showTrails ? 'selected' : '')}
+              aria-pressed={showTrails}
+              onClick={() => setShowTrails((v) => !v)}
+            >
+              <Route size={17} /> Trails
             </button>
             <div className="scenario-buttons">
               <button
@@ -362,11 +393,11 @@ export default function Home() {
             <div className="system-name">
               Jev <span>/ reflex layer</span>
             </div>
-            <p className="question">“What should I do right now?”</p>
+            <p className="question">{drone.id} · “What should I do right now?”</p>
             <div className="action">
               <ArrowUpRight size={32} />
               <strong>
-                {control.decision?.action.replaceAll('_', ' ') ??
+                {drone.health <= 0 ? 'LOST' : drone.complete ? 'ARRIVED' : drone.battery <= 0 ? 'OUT OF BATTERY' : control.decision?.action.replaceAll('_', ' ') ??
                   'AWAITING INPUT'}
               </strong>
             </div>
@@ -414,7 +445,7 @@ export default function Home() {
           </section>
           <div className={'bridge ' + (control.planning ? 'active' : '')}>
             <ArrowDown size={15} />
-            {control.planning
+            {!system2Enabled ? 'SYSTEM 2 OFF · JEV STEERING' : control.planning
               ? 'SYSTEM 2 PLANNING · JEV STILL STEERING'
               : 'UNCERTAINTY TRIGGERS REASONING'}
           </div>
@@ -424,7 +455,7 @@ export default function Home() {
             <div className="system-title">
               <span>✳ SYSTEM 2</span>
               <span className="chip">
-                {control.planning
+                {!system2Enabled ? 'DISABLED' : control.planning
                   ? 'PLANNING'
                   : control.guidancePending
                     ? 'STRATEGY SET'
@@ -446,7 +477,7 @@ export default function Home() {
                   ? 'Preserve. Progress. Arrive.'
                   : `${control.strategy.scanRequired ? 'Scan. ' : ''}Bypass ${control.strategy.preferredSide}. Resume.`}
               </strong>
-              <p>{control.strategy.rationale}</p>
+              <p>{system2Enabled ? control.strategy.rationale : 'Each drone navigates independently using System 1. No advisory requests are sent.'}</p>
             </div>
             <div className="planner-foot">
               <span>
@@ -475,7 +506,7 @@ export default function Home() {
         <div className="telemetry">
           <div className="section-title">
             <h2>
-              Decision history <span>{events.length} events</span>
+              Decision history · {drone.id} <span>{events.length} events</span>
             </h2>
             <button className="text-button" onClick={download}>
               <Download size={15} /> Export JSON
@@ -493,6 +524,34 @@ export default function Home() {
         </div>
         <div className="settings">
           <h2>Experiment controls</h2>
+          <div className="setting-row">
+            <label htmlFor="drone-count">Number of drones</label>
+            <select id="drone-count" value={droneCount} onChange={(e) => {
+              const count = Number(e.target.value);
+              setDroneCount(count);
+              reset(world.scenario, mode, plannerMode, seed, count);
+            }}>
+              {Array.from({ length: 20 }, (_, i) => i + 1).map((count) => <option key={count} value={count}>{count}</option>)}
+            </select>
+          </div>
+          <div className="setting-row">
+            <label htmlFor="system2-enabled">System 2 advice</label>
+            <button
+              id="system2-enabled"
+              type="button"
+              role="switch"
+              aria-checked={system2Enabled}
+              className={'toggle ' + (system2Enabled ? 'on' : '')}
+              onClick={() => {
+                const enabled = !system2Enabled;
+                setSystem2Enabled(enabled);
+                reset(world.scenario, mode, plannerMode, seed, droneCount, enabled);
+              }}
+            >
+              <i />
+            </button>
+          </div>
+          <p>Changing fleet size or System 2 starts a fresh mission. Select a drone above to inspect its decisions. An obstacle impact removes that drone; the others continue.</p>
           <div className="setting-label">
             <label id="threshold-label">Escalation threshold</label>
             <strong>{threshold}%</strong>
@@ -582,7 +641,7 @@ export default function Home() {
           <button
             className="primary-button live-preset"
             disabled={
-              !providerConfig.jevConfigured || !providerConfig.plannerConfigured
+              !providerConfig.jevConfigured || (system2Enabled && !providerConfig.plannerConfigured)
             }
             onClick={() => {
               setMode('jev');
@@ -594,7 +653,7 @@ export default function Home() {
             Prepare live mission
           </button>
           <p>
-            Sets Jev + GLM 5.3 and a 20% starting gate. Launch when ready;
+            Sets Jev{system2Enabled ? ' + GLM 5.3' : ' only'} and a 20% starting gate. Launch when ready;
             the gate remains adjustable.
           </p>
           <div className="setting-row">
@@ -637,7 +696,7 @@ export default function Home() {
         </div>
       </section>
       <footer>
-        <span>REFLEX LAB / SINGLE-DRONE PROTOTYPE</span>
+        <span>REFLEX LAB / MULTI-DRONE EXPERIMENT</span>
         <span>
           Structured observations → typed actions → measurable outcomes
         </span>

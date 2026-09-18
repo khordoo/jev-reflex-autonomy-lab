@@ -1,5 +1,6 @@
 import type { Action, Drone, World } from './types';
 export const ARRIVAL_RADIUS = 35;
+export const DRONE_RADIUS = 10;
 export const TURN_RATE = 0.22;
 export const CRUISE_SPEED = 52;
 export const MIN_SPEED = 16;
@@ -7,6 +8,7 @@ export const MAX_SPEED = 90;
 export const ACCELERATION_STEP = 6;
 export const DECELERATION_STEP = 10;
 export const RETREAT_SPEED = 26;
+export const MAX_DRONES = 20;
 export const wrapAngle = (n: number) => Math.atan2(Math.sin(n), Math.cos(n));
 export function seeded(seed: number) {
   let n = seed >>> 0;
@@ -18,6 +20,7 @@ export function seeded(seed: number) {
 export function createWorld(
   scenario: World['scenario'] = 'hero',
   seed = 42,
+  droneCount = 1,
 ): World {
   const random = seeded(seed);
   return {
@@ -25,20 +28,23 @@ export function createWorld(
     seed,
     scenario,
     destination: { x: 1500, y: 360 },
-    agents: {
-      drone_001: {
-        id: 'drone_001',
-        position: { x: 100, y: 360 },
-        velocity: { x: CRUISE_SPEED, y: 0 },
-        heading: 0,
+    agents: Object.fromEntries(Array.from({ length: Math.max(1, Math.min(MAX_DRONES, Math.floor(droneCount) || 1)) }, (_, index) => {
+      const count = Math.max(1, Math.min(MAX_DRONES, Math.floor(droneCount) || 1));
+      const id = `D_${String(index + 1).padStart(2, '0')}`;
+      const drift = (random() - 0.5) * 0.1;
+      return [id, {
+        id,
+        position: { x: 100 + random() * 30, y: 12 + ((index + 0.5) / count) * (708 - 12) },
+        velocity: { x: Math.cos(drift) * CRUISE_SPEED, y: Math.sin(drift) * CRUISE_SPEED },
+        heading: drift,
         health: 100,
         battery: 100,
         trail: [],
         scanned: [],
         collisions: [],
         complete: false,
-      },
-    },
+      }];
+    })),
     objects:
       scenario === 'hero'
         ? [
@@ -85,7 +91,7 @@ export function createWorld(
               radius: 72,
               kind: 'UNKNOWN',
               signal: true,
-              activeAt: 10,
+              activeAt: 5,
             },
             {
               id: 'asteroid_06',
@@ -108,7 +114,7 @@ export function createWorld(
               radius: unknown ? 72 : 15 + random() * 28,
               kind: unknown ? ('UNKNOWN' as const) : ('ASTEROID' as const),
               signal: unknown,
-              activeAt: unknown ? 24 : 0,
+              activeAt: unknown ? 12 : 0,
             };
           }),
   };
@@ -159,7 +165,8 @@ export function stepWorld(world: World, dt: number) {
         previousTime < o.activeAt &&
         world.time >= o.activeAt
       ) {
-        const drone = Object.values(world.agents)[0];
+        const drone = Object.values(world.agents).find((d) => !d.complete && d.health > 0 && d.battery > 0);
+        if (!drone) continue;
         const dx = world.destination.x - drone.position.x;
         const dy = world.destination.y - drone.position.y;
         const distance = Math.max(1, Math.hypot(dx, dy));
@@ -204,7 +211,7 @@ export function stepWorld(world: World, dt: number) {
       if (
         o.activeAt <= world.time &&
         Math.hypot(o.position.x - d.position.x, o.position.y - d.position.y) <
-          o.radius + 10 &&
+          o.radius + DRONE_RADIUS &&
         !d.collisions.includes(o.id)
       ) {
         d.collisions.push(o.id);
@@ -222,6 +229,21 @@ export function stepWorld(world: World, dt: number) {
     if (!last || Math.hypot(last.x - d.position.x, last.y - d.position.y) > 3) {
       d.trail.push({ ...d.position });
       if (d.trail.length > 600) d.trail.shift();
+    }
+  }
+  // Compare all surviving drones after movement so pair outcomes do not
+  // depend on iteration order. Arrived drones are docked off the flight lane.
+  const flying = Object.values(world.agents).filter((d) => !d.complete && d.health > 0 && d.battery > 0);
+  for (let i = 0; i < flying.length; i++) {
+    for (let j = i + 1; j < flying.length; j++) {
+      const a = flying[i], b = flying[j];
+      if (Math.hypot(a.position.x - b.position.x, a.position.y - b.position.y) < DRONE_RADIUS * 2) {
+        a.collisions.push(b.id);
+        b.collisions.push(a.id);
+        a.health = b.health = 0;
+        a.velocity = { x: 0, y: 0 };
+        b.velocity = { x: 0, y: 0 };
+      }
     }
   }
 }

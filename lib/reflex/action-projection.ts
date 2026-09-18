@@ -4,6 +4,7 @@ import {
   ARRIVAL_RADIUS,
   CRUISE_SPEED,
   DECELERATION_STEP,
+  DRONE_RADIUS,
   MAX_SPEED,
   MIN_SPEED,
   RETREAT_SPEED,
@@ -80,7 +81,7 @@ export function actionProjections(o: Observation) {
         return {
           id: d.id,
           surfaceClearanceMetres: Math.round(
-            Math.hypot(p.x + vx * t, p.y + vy * t) - d.estimatedSize - 10,
+            Math.hypot(p.x + vx * t, p.y + vy * t) - d.estimatedSize - DRONE_RADIUS,
           ),
           secondsToClosest: +t.toFixed(1),
         };

@@ -342,8 +342,17 @@ canvas {
   letter-spacing: 1px;
   color: #718896;
 }
+.map-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 .map-key span:first-child {
-  color: #b7f580;
+  color: inherit;
+}
+.map-key svg {
+  width: 16px;
+  height: 11px;
 }
 .flight-stats {
   display: grid;
@@ -742,6 +751,35 @@ td {
   margin: 10px 0;
   gap: 12px;
   color: #92a5b2;
+}
+.toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid #2b3e4c;
+  background: #111d27;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.toggle i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #6b8291;
+  transition: transform 0.15s, background 0.15s;
+}
+.toggle.on {
+  background: #23371b;
+  border-color: #4f7a2c;
+}
+.toggle.on i {
+  transform: translateX(18px);
+  background: #b7f580;
 }
 select,
 input {

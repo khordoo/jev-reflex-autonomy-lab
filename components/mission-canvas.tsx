@@ -5,9 +5,11 @@ import { seeded } from '@/lib/reflex/world';
 export function MissionCanvas({
   world,
   sensors,
+  showTrails,
 }: {
   world: World;
   sensors: boolean;
+  showTrails: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -90,7 +92,10 @@ export function MissionCanvas({
           o.position.y - o.radius - 17,
         );
       }
-      for (const d of Object.values(world.agents)) {
+      const fleetColors = ['#b4f574', '#7fc7ff', '#f3bb77', '#d6a3ff', '#78e1ca', '#ff9fba', '#e6df80', '#a7baff'];
+      for (const [index, d] of Object.values(world.agents).entries()) {
+        if (d.health <= 0 || d.battery <= 0) continue;
+        const color = fleetColors[index % fleetColors.length];
         if (sensors) {
           ctx.strokeStyle = '#a7ef7422';
           ctx.fillStyle = '#a7ef7405';
@@ -116,13 +121,15 @@ export function MissionCanvas({
             }
           ctx.setLineDash([]);
         }
-        ctx.strokeStyle = '#b4f574aa';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        d.trail.forEach((p, i) =>
-          i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y),
-        );
-        ctx.stroke();
+        if (showTrails) {
+          ctx.strokeStyle = `${color}aa`;
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          d.trail.forEach((p, i) =>
+            i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y),
+          );
+          ctx.stroke();
+        }
         const px = d.position.x,
           py = d.position.y,
           destDistance = Math.hypot(dest.x - px, dest.y - py),
@@ -172,9 +179,9 @@ export function MissionCanvas({
         ctx.save();
         ctx.translate(d.position.x, d.position.y);
         ctx.rotate(d.heading);
-        ctx.shadowColor = '#b4f574';
+        ctx.shadowColor = color;
         ctx.shadowBlur = 14;
-        ctx.fillStyle = '#d4ffad';
+        ctx.fillStyle = color;
         ctx.beginPath();
         ctx.moveTo(21, 0);
         ctx.lineTo(-14, -12);
@@ -183,15 +190,15 @@ export function MissionCanvas({
         ctx.closePath();
         ctx.fill();
         ctx.restore();
-        ctx.font = '18px monospace';
-        ctx.fillStyle = '#d4ffad';
-        ctx.fillText(d.id.toUpperCase(), d.position.x - 45, d.position.y + 42);
+        ctx.font = '12px monospace';
+        ctx.fillStyle = color;
+        ctx.fillText(d.id.toUpperCase(), d.position.x - 14, d.position.y + 26);
       }
       frame = requestAnimationFrame(render);
     };
     render();
     return () => cancelAnimationFrame(frame);
-  }, [world, sensors]);
+  }, [world, sensors, showTrails]);
   return (
     <canvas
       ref={ref}

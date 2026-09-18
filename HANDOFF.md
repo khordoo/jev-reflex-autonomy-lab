@@ -1,5 +1,30 @@
 # Reflex Demo Handoff
 
+## Multi-drone update (2026-09-18)
+
+Work is on `feat/multi-drone-navigation`, branched from the current `main`.
+The dashboard defaults to three drones and allows 1–8. They start at the same
+x coordinate with 40 m vertical spacing. Every drone has independent Jev
+requests, strategy state, telemetry, and arrival status. Select a drone in the
+flight stats to inspect its charts and decision cards; JSON export includes
+the entire fleet.
+
+The System 2 switch resets the mission and disables all planner dispatch when
+off. Jev remains active for every surviving drone. Current escalation is
+confidence-only at 20% (older notes below about hazard/unknown gates are stale).
+Every obstacle impact is now fatal to that drone; it disappears from the map
+while the remaining drones continue. Mission completion waits for the whole
+fleet to arrive, collide, or exhaust its battery. Active peers are sensed as
+DRONE contacts with relative velocity and included in action projections.
+Overlapping drone collision radii destroy both drones; arrived drones are
+treated as docked and excluded from active traffic.
+
+Validation: TypeScript passed; an in-memory runtime smoke check verified three
+spaced starts, independent decisions, zero planner calls with System 2 off,
+isolated fatal impact, survivor movement, and independent arrival. No unit tests
+were written or changed. Live multi-drone provider performance and navigation
+success across seeds still need user evaluation; arrival is not guaranteed.
+
 ## Repository state
 
 - Branch: `fix/jev-timeout-errors`

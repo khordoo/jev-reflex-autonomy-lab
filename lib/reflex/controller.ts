@@ -16,6 +16,7 @@ export { validateDecision } from './validation';
 export class Controller {
   agents: Record<string, AgentControl> = {};
   threshold = 0.2;
+  system2Enabled = true;
   failures: {
     timestamp: string;
     agentId: string;
@@ -138,7 +139,7 @@ export class Controller {
         (signal) => this.decisionProvider.decide(context, signal),
         6000,
       );
-      if (this.disposed || generation !== this.generation) return;
+      if (this.disposed || generation !== this.generation || world.agents[id].health <= 0 || world.agents[id].complete || world.agents[id].battery <= 0) return;
       validateDecision(decision);
       s.error = undefined;
       this.failuresByAgent[id] = 0;
@@ -160,7 +161,7 @@ export class Controller {
           revision: guidanceRevision,
         };
       }
-      const escalated = !s.planning && !s.guidancePending && uncertain;
+      const escalated = this.system2Enabled && !s.planning && !s.guidancePending && uncertain;
       const event: TelemetryEvent = {
         guidanceRevision,
         timestamp: new Date().toISOString(),
@@ -172,7 +173,7 @@ export class Controller {
         provider: this.decisionProvider.name,
         threshold: this.threshold,
         executed,
-        provisional: uncertain,
+        provisional: this.system2Enabled && uncertain,
         escalated,
         strategyBefore: strategy,
         strategyAfter: { ...s.strategy },
@@ -214,8 +215,10 @@ export class Controller {
             validateStrategy(plan, id);
             if (plan.revision !== strategy.revision + 1)
               throw new Error('Invalid planner strategy revision');
-            s.strategy = plan;
-            s.guidancePending = true;
+            if (this.system2Enabled && world.agents[id].health > 0 && !world.agents[id].complete && world.agents[id].battery > 0) {
+              s.strategy = plan;
+              s.guidancePending = true;
+            }
             event.strategyAfter = { ...plan };
             event.system2LatencyMs = performance.now() - planStart;
             planningEvent.status = 'completed';

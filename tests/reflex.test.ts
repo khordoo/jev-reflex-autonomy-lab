@@ -48,13 +48,16 @@ test('seeded world is repeatable and one agent is instantiated', () => {
     createWorld('seeded', 123).objects,
     createWorld('seeded', 124).objects,
   );
-  assert.deepEqual(Object.keys(createWorld().agents), ['drone_001']);
+  assert.deepEqual(Object.keys(createWorld().agents), ['D_01']);
 });
 test('physics projections omit ineffective actions without choosing a maneuver', () => {
   const w = createWorld();
   w.objects = [];
-  w.agents.drone_001.velocity = { x: 0, y: 0 };
-  const p = actionProjections(observe(w, 'drone_001'));
+  const a = w.agents.D_01;
+  a.position = { x: 100, y: 360 };
+  a.heading = 0;
+  a.velocity = { x: 0, y: 0 };
+  const p = actionProjections(observe(w, 'D_01'));
   assert.equal('DECELERATE' in p, false);
   assert.equal('SCAN' in p, false);
   assert.ok('TURN_LEFT' in p && 'TURN_RIGHT' in p);
@@ -62,6 +65,10 @@ test('physics projections omit ineffective actions without choosing a maneuver',
 });
 test('sensors measure geometry without mutating world or prescribing an action', () => {
   const w = createWorld();
+  const a = w.agents.D_01;
+  a.position = { x: 100, y: 360 };
+  a.heading = 0;
+  a.velocity = { x: 52, y: 0 };
   w.objects = [
     {
       id: 'test',
@@ -74,7 +81,7 @@ test('sensors measure geometry without mutating world or prescribing an action',
     },
   ];
   const before = structuredClone(w),
-    o = observe(w, 'drone_001');
+    o = observe(w, 'D_01');
   assert.equal(o.detections[0].distance, 100);
   assert.equal(o.detections[0].relativeBearing, 0);
   assert.ok(o.detections[0].closestApproach < 0.001);
@@ -87,17 +94,17 @@ test('sensors measure geometry without mutating world or prescribing an action',
 test('physics executes discrete actions and scanning updates observable classification', () => {
   const w = createWorld();
   w.time = 11;
-  w.agents.drone_001.position = { x: 800, y: 360 };
-  applyAction(w, 'drone_001', 'TURN_RIGHT');
-  assert.ok(w.agents.drone_001.heading > 0);
+  w.agents.D_01.position = { x: 800, y: 360 };
+  applyAction(w, 'D_01', 'TURN_RIGHT');
+  assert.ok(w.agents.D_01.heading > 0);
   assert.equal(
-    observe(w, 'drone_001').detections.find((d) => d.id === 'unknown_05')
+    observe(w, 'D_01').detections.find((d) => d.id === 'unknown_05')
       ?.classification,
     'UNKNOWN',
   );
-  applyAction(w, 'drone_001', 'SCAN');
+  applyAction(w, 'D_01', 'SCAN');
   assert.equal(
-    observe(w, 'drone_001').detections.find((d) => d.id === 'unknown_05')
+    observe(w, 'D_01').detections.find((d) => d.id === 'unknown_05')
       ?.classification,
     'DEBRIS',
   );
@@ -108,11 +115,11 @@ test('hero policy encounters uncertainty, follows the mock plan and reaches dest
     new MockDecisionProvider(),
     new MockStrategyProvider(),
   );
-  const s = c.state('drone_001');
+  const s = c.state('D_01');
   let uncertainty = false,
     planAt = Infinity;
-  for (let i = 0; i < 500 && !w.agents.drone_001.complete; i++) {
-    const o = observe(w, 'drone_001');
+  for (let i = 0; i < 500 && !w.agents.D_01.complete; i++) {
+    const o = observe(w, 'D_01');
     if (w.time >= planAt)
       s.strategy = {
         ...s.strategy,
@@ -122,7 +129,7 @@ test('hero policy encounters uncertainty, follows the mock plan and reaches dest
         revision: 1,
       };
     const d = chooseMockDecision({
-      agentId: 'drone_001',
+      agentId: 'D_01',
       observation: o,
       strategy: s.strategy,
       actions: ACTIONS,
@@ -133,19 +140,19 @@ test('hero policy encounters uncertainty, follows the mock plan and reaches dest
       uncertainty = true;
       planAt = Math.min(planAt, w.time + 2.4);
     }
-    applyAction(w, 'drone_001', d.action);
+    applyAction(w, 'D_01', d.action);
     for (let f = 0; f < 18; f++) stepWorld(w, 1 / 60);
   }
   assert.ok(uncertainty);
-  assert.ok(w.agents.drone_001.scanned.includes('unknown_05'));
+  assert.ok(w.agents.D_01.scanned.includes('unknown_05'));
   assert.ok(
-    w.agents.drone_001.complete,
-    JSON.stringify(w.agents.drone_001.position),
+    w.agents.D_01.complete,
+    JSON.stringify(w.agents.D_01.position),
   );
   assert.equal(
-    w.agents.drone_001.collisions.length,
+    w.agents.D_01.collisions.length,
     0,
-    JSON.stringify(w.agents.drone_001.collisions),
+    JSON.stringify(w.agents.D_01.collisions),
   );
 });
 function confidenceProvider(confidence: number): DecisionProvider {
@@ -171,7 +178,7 @@ function confidenceProvider(confidence: number): DecisionProvider {
 async function tickOnce(c: Controller, w: ReturnType<typeof createWorld>) {
   c.tick(w);
   await new Promise((r) => setTimeout(r, 20));
-  return c.state('drone_001').telemetry.at(-1);
+  return c.state('D_01').telemetry.at(-1);
 }
 
 test('system 2 activates below the 20% gate even with an empty scene', async () => {
@@ -186,7 +193,7 @@ test('system 2 activates below the 20% gate even with an empty scene', async () 
   assert.equal(event?.escalated, true);
   assert.equal(event?.provisional, true);
   assert.equal(event?.executed, true);
-  const state = c.state('drone_001');
+  const state = c.state('D_01');
   assert.equal(state.planningEvents.length, 1);
   assert.equal(state.planningEvents[0].trigger, 'confidence');
   assert.equal(state.planningEvents[0].triggerConfidence, 0.19);
@@ -204,7 +211,7 @@ test('system 2 stays off at the 20% gate and for high confidence next to a large
   assert.equal(boundaryEvent?.escalated, false);
   assert.equal(boundaryEvent?.provisional, false);
   assert.equal(boundaryEvent?.executed, true);
-  assert.equal(boundary.state('drone_001').planningEvents.length, 0);
+  assert.equal(boundary.state('D_01').planningEvents.length, 0);
   boundary.dispose();
 
   const w = createWorld();
@@ -228,7 +235,7 @@ test('system 2 stays off at the 20% gate and for high confidence next to a large
   assert.equal(unknownEvent?.escalated, false);
   assert.equal(unknownEvent?.provisional, false);
   assert.equal(unknownEvent?.executed, true);
-  assert.equal(confident.state('drone_001').planningEvents.length, 0);
+  assert.equal(confident.state('D_01').planningEvents.length, 0);
   confident.dispose();
 });
 test('a plan runs once while pending and its guidance is consumed by one decision', async () => {
@@ -248,7 +255,7 @@ test('a plan runs once while pending and its guidance is consumed by one decisio
   };
   const c = new Controller(confidenceProvider(0.1), planner);
   await tickOnce(c, w);
-  const s = c.state('drone_001');
+  const s = c.state('D_01');
   assert.equal(calls, 1);
   assert.equal(s.planning, true);
   assert.equal(s.planningEvents[0].status, 'planning');
@@ -261,7 +268,7 @@ test('a plan runs once while pending and its guidance is consumed by one decisio
 
   w.time = 0.6;
   finish({
-    agentId: 'drone_001',
+    agentId: 'D_01',
     mode: 'CAUTIOUS_BYPASS',
     preferredSide: 'right',
     safetyDistance: 60,
@@ -313,9 +320,9 @@ test('unconfigured Jev reports failure before any network request', async () => 
   const w = createWorld(),
     c = new Controller(new JevDecisionProvider(), new MockStrategyProvider(0));
   const context = {
-    agentId: 'drone_001',
-    observation: observe(w, 'drone_001'),
-    strategy: c.state('drone_001').strategy,
+    agentId: 'D_01',
+    observation: observe(w, 'D_01'),
+    strategy: c.state('D_01').strategy,
     mission: 'Transit',
     actions: ACTIONS,
   };
@@ -378,13 +385,13 @@ test('disposing a controller ignores pending decisions', async () => {
   c.tick(w);
   c.dispose();
   await new Promise((r) => setTimeout(r, 30));
-  assert.equal(c.state('drone_001').telemetry.length, 0);
+  assert.equal(c.state('D_01').telemetry.length, 0);
 });
 test('per-agent strategy and observation histories are isolated', async () => {
   const w = createWorld();
-  w.agents.drone_002 = {
-    ...structuredClone(w.agents.drone_001),
-    id: 'drone_002',
+  w.agents.D_02 = {
+    ...structuredClone(w.agents.D_01),
+    id: 'D_02',
     position: { x: 100, y: 100 },
   };
   const c = new Controller(
@@ -393,8 +400,8 @@ test('per-agent strategy and observation histories are isolated', async () => {
   );
   c.tick(w);
   await new Promise((r) => setTimeout(r, 10));
-  assert.equal(c.state('drone_002').history[0].observerId, 'drone_002');
-  assert.notEqual(c.state('drone_001').history, c.state('drone_002').history);
+  assert.equal(c.state('D_02').history[0].observerId, 'D_02');
+  assert.notEqual(c.state('D_01').history, c.state('D_02').history);
   c.dispose();
 });
 
@@ -407,27 +414,27 @@ test('confidence chart uses returned confidence and leaves gaps for provider fai
   c.threshold = 0.8;
   c.tick(w);
   await new Promise((r) => setTimeout(r, 10));
-  const event = c.state('drone_001').telemetry[0];
+  const event = c.state('D_01').telemetry[0];
   const data = confidenceSeries(
     [event],
     [
-      { agentId: 'drone_001', simulationTime: 2 },
-      { agentId: 'drone_002', simulationTime: 1 },
+      { agentId: 'D_01', simulationTime: 2 },
+      { agentId: 'D_02', simulationTime: 1 },
     ],
-    'drone_001',
+    'D_01',
   );
   assert.equal(data.length, 2);
   assert.equal(data[0].confidence, event.decision.confidence * 100);
   assert.equal(data[0].threshold, 80);
   assert.equal(data[1].confidence, null);
-  assert.deepEqual(confidenceSeries([], [], 'drone_001'), []);
+  assert.deepEqual(confidenceSeries([], [], 'D_01'), []);
   c.dispose();
 });
 test('confidence chart changes color only while System 2 is actively planning', () => {
   const event = (time: number) =>
     ({
       simulationTime: time,
-      agentId: 'drone_001',
+      agentId: 'D_01',
       decision: { confidence: 0.5, action: 'HOLD' },
       threshold: 0.3,
       observation: { detections: [] },
@@ -436,7 +443,7 @@ test('confidence chart changes color only while System 2 is actively planning', 
   const plans = [
     {
       id: 'p1',
-      agentId: 'drone_001',
+      agentId: 'D_01',
       provider: 'planner',
       mode: 'live',
       startedAt: 2,
@@ -448,7 +455,7 @@ test('confidence chart changes color only while System 2 is actively planning', 
   const data = confidenceSeries(
     [event(1), event(3), event(5)],
     [],
-    'drone_001',
+    'D_01',
     plans,
     5,
   );
@@ -460,14 +467,14 @@ test('confidence chart changes color only while System 2 is actively planning', 
 });
 test('latency chart separates Jev milliseconds from planner wall time', () => {
   const event = {
-    agentId: 'drone_001',
+    agentId: 'D_01',
     simulationTime: 2,
     latencyMs: 157,
     provider: 'TypeSafe Jev',
   } as TelemetryEvent;
   const plan = {
     id: 'p1',
-    agentId: 'drone_001',
+    agentId: 'D_01',
     provider: 'Muse Spark',
     mode: 'live',
     startedAt: 3,
@@ -476,16 +483,16 @@ test('latency chart separates Jev milliseconds from planner wall time', () => {
     status: 'completed',
     triggerConfidence: 0.2,
   } as PlanningEvent;
-  const data = latencySeries([event], [plan], 'drone_001');
+  const data = latencySeries([event], [plan], 'D_01');
   assert.equal(data[0].system1LatencyMs, 157);
   assert.equal(data[0].system2LatencyMs, null);
   assert.equal(data[1].system1LatencyMs, null);
   assert.equal(data[1].system2LatencyMs, 14900);
-  assert.deepEqual(latencySeries([], [], 'drone_001'), []);
+  assert.deepEqual(latencySeries([], [], 'D_01'), []);
 });
 test('a large-obstacle impact is terminal and cannot count as arrival', () => {
   const w = createWorld();
-  const d = w.agents.drone_001;
+  const d = w.agents.D_01;
   const obstacle = w.objects.find((o) => o.id === 'unknown_05')!;
   w.time = 10;
   d.position = { ...obstacle.position };
@@ -500,7 +507,7 @@ test('planner chart shows exact request intervals including pending requests', (
   const plans: PlanningEvent[] = [
     {
       id: 'p1',
-      agentId: 'drone_001',
+      agentId: 'D_01',
       provider: 'mock',
       mode: 'mock',
       startedAt: 12,
@@ -512,7 +519,7 @@ test('planner chart shows exact request intervals including pending requests', (
     },
     {
       id: 'p2',
-      agentId: 'drone_001',
+      agentId: 'D_01',
       provider: 'mock',
       mode: 'mock',
       startedAt: 22,
@@ -520,14 +527,14 @@ test('planner chart shows exact request intervals including pending requests', (
       triggerConfidence: 0.42,
     },
   ];
-  assert.deepEqual(plannerSeries(plans, 24, 'drone_001'), [
+  assert.deepEqual(plannerSeries(plans, 24, 'D_01'), [
     { time: 0, active: 0 },
     { time: 12, active: 1 },
     { time: 14.4, active: 0 },
     { time: 22, active: 1 },
     { time: 24, active: 1 },
   ]);
-  assert.deepEqual(plannerSeries(plans, 24, 'drone_002'), [
+  assert.deepEqual(plannerSeries(plans, 24, 'D_02'), [
     { time: 0, active: 0 },
     { time: 24, active: 0 },
   ]);
@@ -535,16 +542,16 @@ test('planner chart shows exact request intervals including pending requests', (
 function planningFixture(): PlanningContext {
   const w = createWorld();
   w.time = 12;
-  w.agents.drone_001.position = { x: 720, y: 360 };
+  w.agents.D_01.position = { x: 720, y: 360 };
   const c = new Controller(
     new MockDecisionProvider(),
     new MockStrategyProvider(),
   );
-  const observation = observe(w, 'drone_001');
+  const observation = observe(w, 'D_01');
   return {
-    agentId: 'drone_001',
+    agentId: 'D_01',
     observation,
-    strategy: c.state('drone_001').strategy,
+    strategy: c.state('D_01').strategy,
     mission: 'Transit',
     actions: ACTIONS,
     observations: [observation],
@@ -707,7 +714,7 @@ for (const recoverableStatus of [429, 500, 503, 529])
 test('controller records planner start and completion at actual simulation times', async () => {
   const w = createWorld();
   w.time = 12;
-  w.agents.drone_001.position = { x: 720, y: 360 };
+  w.agents.D_01.position = { x: 720, y: 360 };
   let finish!: (value: Strategy) => void;
   const planner = {
     name: 'controlled',
@@ -720,7 +727,7 @@ test('controller records planner start and completion at actual simulation times
   const c = new Controller(confidenceProvider(0.19), planner);
   c.tick(w);
   await new Promise((r) => setTimeout(r, 10));
-  const s = c.state('drone_001');
+  const s = c.state('D_01');
   assert.equal(s.planningEvents[0].startedAt, 12);
   assert.equal(s.planningEvents[0].status, 'planning');
   w.time = 15;
@@ -745,7 +752,7 @@ test('planner failures are recorded in the failures list', async () => {
   const c = new Controller(confidenceProvider(0.19), planner);
   c.tick(w);
   await new Promise((r) => setTimeout(r, 10));
-  const s = c.state('drone_001');
+  const s = c.state('D_01');
   assert.equal(s.planningEvents[0].status, 'failed');
   assert.equal(c.failures.length, 1);
   assert.equal(c.failures[0].provider, 'controlled');

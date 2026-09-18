@@ -42,7 +42,7 @@ export type Detection = {
   relativePosition: Vec;
   relativeVelocityVector: Vec;
   id: string;
-  classification: SpaceObject['kind'];
+  classification: SpaceObject['kind'] | 'DRONE';
   classificationConfidence: number;
   distance: number;
   relativeBearing: number;

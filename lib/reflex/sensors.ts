@@ -1,7 +1,16 @@
 import type { Observation, World } from './types';
-import { wrapAngle } from './world';
+import { DRONE_RADIUS, wrapAngle } from './world';
 export function observe(world: World, agentId: string): Observation {
   const d = world.agents[agentId];
+  const contacts = [
+    ...world.objects,
+    ...Object.values(world.agents)
+      .filter((peer) => peer.id !== agentId && !peer.complete && peer.health > 0 && peer.battery > 0)
+      .map((peer) => ({
+        id: peer.id, position: peer.position, velocity: peer.velocity,
+        radius: DRONE_RADIUS, kind: 'DRONE' as const, signal: false, activeAt: 0,
+      })),
+  ];
   return {
     observerId: agentId,
     time: world.time,
@@ -21,7 +30,7 @@ export function observe(world: World, agentId: string): Observation {
         world.destination.x - d.position.x,
       ) - d.heading,
     ),
-    detections: world.objects
+    detections: contacts
       .filter(
         (o) =>
           o.activeAt <= world.time &&
