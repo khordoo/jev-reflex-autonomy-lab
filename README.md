@@ -2,6 +2,8 @@
 
 An interactive multi-drone autonomy simulation powered by [TypeSafe Jev](https://docs.typesafe.ai/), exploring a simple question: what happens when fast, typed System 1 reflexes can ask a slower System 2 reasoning model for advice without giving up control?
 
+The fleet size is configurable from one to twenty drones. System 2 can be turned off entirely, making it easy to compare Jev operating independently against Jev augmented with strategic guidance.
+
 <p align="center">
   <img src="docs/images/reflex-dashboard.png" alt="Reflex Autonomy Lab dashboard showing multiple autonomous drones navigating a dynamic obstacle field" width="100%" />
 </p>
@@ -10,9 +12,9 @@ Each drone navigates independently with Jev as its System 1 reflex layer. When c
 
 ## What the demo shows
 
-- One to twenty independently controlled drones in the same dynamic airspace
+- A configurable fleet of one to twenty independently controlled drones
 - Moving asteroids, debris, unknown signals, and other drones treated as sensed contacts
-- A switch for running Jev alone or enabling System 2 advice
+- A System 2 toggle for running Jev alone or enabling strategic advice
 - Per-drone decisions, confidence, latency, strategy revisions, and collision outcomes
 - Seeded scenarios for repeatable obstacle layouts
 - Canvas rendering separated from React telemetry and controls
