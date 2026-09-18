@@ -39,7 +39,7 @@ export default function Home() {
   const [droneCount, setDroneCount] = useState(3);
   const [system2Enabled, setSystem2Enabled] = useState(true);
   const [selectedAgent, setSelectedAgent] = useState('D_01');
-  const [world, setWorld] = useState(() => createWorld('hero', 42, 3));
+  const [world, setWorld] = useState(() => createWorld('seeded', 42, 3));
   const [controller, setController] = useState(
     () =>
       new Controller(new MockDecisionProvider(), new MockStrategyProvider()),
