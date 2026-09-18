@@ -1,6 +1,8 @@
 import type { Action, Drone, World } from './types';
 export const ARRIVAL_RADIUS = 35;
 export const DRONE_RADIUS = 10;
+export const DOCK_SLOTS = 12;
+export const DOCK_RING_RADIUS = ARRIVAL_RADIUS + 11;
 export const TURN_RATE = 0.22;
 export const CRUISE_SPEED = 52;
 export const MIN_SPEED = 16;
@@ -34,7 +36,7 @@ export function createWorld(
       const drift = (random() - 0.5) * 0.1;
       return [id, {
         id,
-        position: { x: 100 + random() * 30, y: 12 + ((index + 0.5) / count) * (708 - 12) },
+        position: { x: 100 + random() * 90, y: 12 + ((index + 0.5) / count) * (708 - 12) },
         velocity: { x: Math.cos(drift) * CRUISE_SPEED, y: Math.sin(drift) * CRUISE_SPEED },
         heading: drift,
         health: 100,
@@ -91,7 +93,7 @@ export function createWorld(
               radius: 72,
               kind: 'UNKNOWN',
               signal: true,
-              activeAt: 5,
+              activeAt: 3,
             },
             {
               id: 'asteroid_06',
@@ -219,12 +221,29 @@ export function stepWorld(world: World, dt: number) {
         d.health = criticalImpact ? 0 : Math.max(0, d.health - 25);
         if (criticalImpact) d.velocity = { x: 0, y: 0 };
       }
-    d.complete =
+    const arrived =
       d.health > 0 &&
       Math.hypot(
         world.destination.x - d.position.x,
         world.destination.y - d.position.y,
       ) < ARRIVAL_RADIUS;
+    if (arrived && !d.complete) {
+      const dockIndex =
+        Object.values(world.agents).filter((p) => p.complete).length %
+        DOCK_SLOTS;
+      const angle =
+        (dockIndex / DOCK_SLOTS) * Math.PI * 2 - Math.PI / 2;
+      d.position = {
+        x: world.destination.x + Math.cos(angle) * DOCK_RING_RADIUS,
+        y: world.destination.y + Math.sin(angle) * DOCK_RING_RADIUS,
+      };
+      d.heading = Math.atan2(
+        world.destination.y - d.position.y,
+        world.destination.x - d.position.x,
+      );
+      d.velocity = { x: 0, y: 0 };
+    }
+    d.complete = arrived;
     const last = d.trail.at(-1);
     if (!last || Math.hypot(last.x - d.position.x, last.y - d.position.y) > 3) {
       d.trail.push({ ...d.position });

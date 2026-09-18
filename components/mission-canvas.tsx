@@ -6,10 +6,12 @@ export function MissionCanvas({
   world,
   sensors,
   showTrails,
+  showUnknowns,
 }: {
   world: World;
   sensors: boolean;
   showTrails: boolean;
+  showUnknowns: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -61,6 +63,7 @@ export function MissionCanvas({
       for (const o of world.objects) {
         if (world.time < o.activeAt) continue;
         const unknown = o.kind === 'UNKNOWN';
+        if (unknown && !showUnknowns) continue;
         ctx.strokeStyle = unknown ? '#eeb575' : '#607585';
         ctx.fillStyle = unknown ? '#372d27' : '#24333e';
         ctx.lineWidth = 2;
@@ -84,13 +87,6 @@ export function MissionCanvas({
           );
           ctx.stroke();
         }
-        ctx.fillStyle = unknown ? '#efb97b' : '#7994a4';
-        ctx.font = '16px monospace';
-        ctx.fillText(
-          unknown ? 'UNKNOWN / SIGNAL' : o.id.toUpperCase(),
-          o.position.x - o.radius,
-          o.position.y - o.radius - 17,
-        );
       }
       const fleetColors = ['#b4f574', '#7fc7ff', '#f3bb77', '#d6a3ff', '#78e1ca', '#ff9fba', '#e6df80', '#a7baff'];
       for (const [index, d] of Object.values(world.agents).entries()) {
@@ -198,7 +194,7 @@ export function MissionCanvas({
     };
     render();
     return () => cancelAnimationFrame(frame);
-  }, [world, sensors, showTrails]);
+  }, [world, sensors, showTrails, showUnknowns]);
   return (
     <canvas
       ref={ref}

@@ -54,19 +54,38 @@ export function chooseMockDecision({
   const unknown = o.detections.find(
     (d) => d.classification === 'UNKNOWN' && Math.abs(d.relativeBearing) < 1.5,
   );
-  const threat = o.detections.find(
+  const threat =
+    (excludeDrone: boolean) =>
+    o.detections.find(
+      (d) =>
+        (excludeDrone ? d.classification !== 'DRONE' : true) &&
+        Math.abs(d.relativeBearing) < 1.45 &&
+        d.timeToClosestApproach !== null &&
+        d.timeToClosestApproach < 7 &&
+        d.closestApproach < d.estimatedSize + s.safetyDistance,
+    );
+  const obstacleThreat = threat(true);
+  const droneThreat = o.detections.find(
     (d) =>
+      d.classification === 'DRONE' &&
       Math.abs(d.relativeBearing) < 1.45 &&
       d.timeToClosestApproach !== null &&
       d.timeToClosestApproach < 7 &&
       d.closestApproach < d.estimatedSize + s.safetyDistance,
   );
   if (unknown && s.mode === 'TRANSIT') {
-    action = threat ? mockTurn : 'DECELERATE';
+    action = obstacleThreat ? mockTurn : 'DECELERATE';
     confidence = 0.46;
   } else if (unknown && s.scanRequired) action = 'SCAN';
-  else if (threat) action = mockTurn;
-  else if (Math.abs(o.destinationBearing) > 0.13)
+  else if (obstacleThreat) action = mockTurn;
+  else if (droneThreat && droneThreat.relativePosition.x > 0) {
+    const leftClears =
+      projections.TURN_LEFT.boundaryClearanceMetres >= 0 &&
+      projections.TURN_LEFT.contacts.every(
+        (c) => c.surfaceClearanceMetres >= 0,
+      );
+    action = leftClears ? 'TURN_LEFT' : 'DECELERATE';
+  } else if (Math.abs(o.destinationBearing) > 0.13)
     action = o.destinationBearing > 0 ? 'TURN_RIGHT' : 'TURN_LEFT';
   else if (o.speed < (s.mode === 'CAUTIOUS_BYPASS' ? 38 : 53))
     action = 'ACCELERATE';

@@ -9,6 +9,7 @@ import {
   Radar,
   Route,
   RotateCcw,
+  Signal,
   Zap,
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
@@ -46,6 +47,7 @@ export default function Home() {
   const [running, setRunning] = useState(false),
     [sensors, setSensors] = useState(true),
     [showTrails, setShowTrails] = useState(true),
+    [showUnknowns, setShowUnknowns] = useState(true),
     [threshold, setThreshold] = useState(20),
     [mode, setMode] = useState('mock'),
     [plannerMode, setPlannerMode] = useState('mock'),
@@ -119,6 +121,20 @@ export default function Home() {
   useEffect(() => {
     controller.threshold = threshold / 100;
   }, [controller, threshold]);
+  useEffect(() => {
+    const current = world.agents[selectedAgent];
+    if (!current) return;
+    if (current.complete || current.health <= 0 || current.battery <= 0) {
+      const next = Object.values(world.agents)
+        .filter((d) => !d.complete && d.health > 0 && d.battery > 0)
+        .sort(
+          (a, b) =>
+            Math.hypot(world.destination.x - a.position.x, world.destination.y - a.position.y) -
+            Math.hypot(world.destination.x - b.position.x, world.destination.y - b.position.y),
+        )[0];
+      if (next) setSelectedAgent(next.id);
+    }
+  }, [world, selectedAgent, world.time]);
   useEffect(() => {
     controller.activate();
     let frame = 0,
@@ -278,7 +294,7 @@ export default function Home() {
             </span>
           </div>
           <div className="map">
-            <MissionCanvas world={world} sensors={sensors} showTrails={showTrails} />
+            <MissionCanvas world={world} sensors={sensors} showTrails={showTrails} showUnknowns={showUnknowns} />
             <div className="map-key">
               <span>
                 <svg viewBox="-14 -12 35 24" aria-hidden="true">
@@ -318,7 +334,9 @@ export default function Home() {
             <div>
               <span>VELOCITY</span>
               <strong>
-                {Math.hypot(drone.velocity.x, drone.velocity.y).toFixed(0)}{' '}
+                {world.time === 0
+                  ? '0'
+                  : Math.hypot(drone.velocity.x, drone.velocity.y).toFixed(0)}{' '}
                 <small>m/s</small>
               </strong>
             </div>
@@ -365,6 +383,13 @@ export default function Home() {
               onClick={() => setShowTrails((v) => !v)}
             >
               <Route size={17} /> Trails
+            </button>
+            <button
+              className={'text-button ' + (showUnknowns ? 'selected' : '')}
+              aria-pressed={showUnknowns}
+              onClick={() => setShowUnknowns((v) => !v)}
+            >
+              <Signal size={17} /> Unknown signal
             </button>
             <div className="scenario-buttons">
               <button
