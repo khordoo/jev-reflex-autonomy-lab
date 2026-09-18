@@ -5,10 +5,18 @@ An interactive multi-drone autonomy simulation powered by [TypeSafe Jev](https:/
 The fleet size is configurable from one to twenty drones. System 2 can be turned off entirely, making it easy to compare Jev operating independently against Jev augmented with strategic guidance.
 
 <p align="center">
-  <img src="docs/images/reflex-dashboard.png" alt="Reflex Autonomy Lab dashboard showing multiple autonomous drones navigating a dynamic obstacle field" width="100%" />
+  <img src="docs/media/reflex-dashboard.png" alt="Reflex Autonomy Lab dashboard showing multiple autonomous drones navigating a dynamic obstacle field" width="100%" />
 </p>
 
 Each drone navigates independently with Jev as its System 1 reflex layer. When confidence falls below the configured threshold, an optional System 2 planner provides one-use strategic guidance through [OpenRouter](https://openrouter.ai/). Jev keeps steering while the planner responds.
+
+## Demo
+
+A short run of the full simulation — launch the fleet, watch Jev steer through a seeded asteroid field, switch to **Live API** for rule-based local decisions with optional System 2 advice, and inspect each drone's telemetry.
+
+<p align="center">
+  <video src="docs/media/demo.mp4" controls preload="metadata" style="max-width:100%; border-radius:8px"></video>
+</p>
 
 ## What the demo shows
 
