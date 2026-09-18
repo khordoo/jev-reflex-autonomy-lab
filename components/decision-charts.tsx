@@ -96,7 +96,8 @@ export const DecisionCharts = memo(function DecisionCharts({
           <div>
             <h3>
               <span className="chart-dot lime-bg" />
-              System 1 · confidence
+              System 1 confidence{' | '}
+              {decisionMode === 'live' ? 'Live API' : 'Local controller'}
             </h3>
             <p>
               {decisionMode === 'mock'

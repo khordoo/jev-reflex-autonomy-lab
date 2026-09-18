@@ -248,7 +248,7 @@ main {
   background: #efb97b;
 }
 .heading {
-  padding: 31px 0 27px;
+  padding: 18px 0 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -261,16 +261,16 @@ main {
   margin: 0 0 9px;
 }
 h1 {
-  font-size: clamp(25px, 2.7vw, 40px);
-  letter-spacing: -1.5px;
-  line-height: 1.2;
+  font-size: clamp(24px, 2.2vw, 36px);
+  letter-spacing: -1.2px;
+  line-height: 1.18;
   font-weight: 500;
   margin: 0;
 }
 .intro {
-  font-size: 15px;
+  font-size: 16px;
   color: #8da0ad;
-  margin: 12px 0 0;
+  margin: 10px 0 0;
 }
 .mode-badge {
   font-size: 12px;
@@ -1109,8 +1109,37 @@ footer {
   display: flex;
   flex-direction: column;
 }
-.live-preset {
-  width: 100%;
+.live-toggle {
+  display: flex;
+  gap: 2px;
+  background: #0e1a22;
+  border: 1px solid #22333f;
+  border-radius: 8px;
+  padding: 2px;
+}
+.live-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  justify-content: center;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #8196a3;
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.live-toggle button.selected {
+  background: #1b3140;
+  color: #e6f4fb;
+}
+.live-toggle button:disabled {
+  color: #4b5c66;
+  cursor: not-allowed;
 }
 @media (max-width: 560px) {
   .signal-chart {

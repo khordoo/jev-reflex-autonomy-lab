@@ -3,6 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ArrowDown,
   ArrowUpRight,
+  Bot,
+  Cloud,
+  Cpu,
   Download,
   Pause,
   Play,
@@ -263,10 +266,9 @@ export default function Home() {
       </header>
       <section className="heading">
         <div>
-          <p className="eyebrow">SYSTEM 1 + SYSTEM 2</p>
-          <h1>What if an agent had reflexes?</h1>
+          <h1>Fast System 1 with optional System 2 guidance</h1>
           <p className="intro">
-            Fast local decisions. Deliberate strategy. One mission.
+            Jev for real-time decisions. GLM 5.3 only when needed.
           </p>
         </div>
         <div className="mode-badge">
@@ -534,7 +536,7 @@ export default function Home() {
               Decision history · {drone.id} <span>{events.length} events</span>
             </h2>
             <button className="text-button" onClick={download}>
-              <Download size={15} /> Export JSON
+              <Download size={15} /> Export Telemetry
             </button>
           </div>
           <DecisionCharts
@@ -663,23 +665,40 @@ export default function Home() {
               </span>
             )}
           </div>
-          <button
-            className="primary-button live-preset"
-            disabled={
-              !providerConfig.jevConfigured || (system2Enabled && !providerConfig.plannerConfigured)
-            }
-            onClick={() => {
-              setMode('jev');
-              setPlannerMode('openrouter');
-              setThreshold(20);
-              reset(world.scenario, 'jev', 'openrouter');
-            }}
-          >
-            Prepare live mission
-          </button>
+          <div className="live-toggle">
+            <button
+              className={mode === 'mock' ? 'selected' : ''}
+              aria-pressed={mode === 'mock'}
+              onClick={() => {
+                setMode('mock');
+                setPlannerMode('mock');
+                reset(world.scenario, 'mock', 'mock');
+              }}
+            >
+              <Cpu size={14} /> Local controller
+            </button>
+            <button
+              className={mode === 'jev' ? 'selected' : ''}
+              aria-pressed={mode === 'jev'}
+              disabled={
+                !providerConfig.jevConfigured ||
+                (system2Enabled && !providerConfig.plannerConfigured)
+              }
+              onClick={() => {
+                setMode('jev');
+                setPlannerMode('openrouter');
+                setThreshold(20);
+                reset(world.scenario, 'jev', 'openrouter');
+              }}
+            >
+              <Cloud size={14} /> Live API
+            </button>
+          </div>
           <p>
-            Sets Jev{system2Enabled ? ' + GLM 5.3' : ' only'} and a 20% starting gate. Launch when ready;
-            the gate remains adjustable.
+            Local controller: runs the built-in rule-based reflexes with no credentials.
+            Live API: live TypeSafe Jev{system2Enabled ? ' + GLM 5.3' : ' only'} over the network.
+            The flight environment stays simulated in both modes.
+            {mode === 'jev' ? ' Live mode sets a 20% starting gate; the gate remains adjustable.' : ''}
           </p>
           <div className="setting-row">
             <label htmlFor="seed">Scenario seed</label>
@@ -695,12 +714,18 @@ export default function Home() {
                     Math.max(0, Math.min(999999, Number(e.target.value) || 0)),
                   )
                 }
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    reset('seeded', mode, plannerMode, seed);
+                  }
+                }}
               />
               <button
                 className="seed-button"
                 onClick={() => reset('seeded', mode, plannerMode, seed)}
               >
-                Load
+                Set
               </button>
               <button
                 className="seed-button"

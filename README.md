@@ -77,7 +77,9 @@ OPENROUTER_API_KEY=your_key
 OPENROUTER_MODEL=z-ai/glm-5.3
 ```
 
-Restart the development server, refresh provider status in the dashboard, and select TypeSafe Jev and OpenRouter. `.dev.vars` is ignored by Git; never expose these credentials through `NEXT_PUBLIC_` variables.
+Restart the development server and refresh provider status in the dashboard, then use the **Local controller / Live API** toggle. The app boots into a **Local controller** — the built-in rule-based reflex, no credentials required — and only when **Live API** is selected do missions run against live TypeSafe Jev (and OpenRouter for System 2). The flight environment is simulated in both modes; the toggle only changes where reflex decisions come from. Selecting Live API sets a 20% starting gate but does not start a mission.
+
+Then press **Launch mission** to begin flying against the live providers. If you configure credentials but keep **Simulation** selected, the mission will run on the built-in simulation (`Mock reflexes`) until you switch. `.dev.vars` is ignored by Git; never expose these credentials through `NEXT_PUBLIC_` variables.
 
 The Jev adapter calls `POST https://api.typesafe.ai/v1/systemone` with `jev-latest` and a typed choice over the available flight actions. The System 2 planner uses OpenRouter's chat completions API with strict structured output. Server errors, rate limits, and context-size failures can retry through the configured fallback model.
 
@@ -85,7 +87,7 @@ The Jev adapter calls `POST https://api.typesafe.ai/v1/systemone` with `jev-late
 
 1. Choose the fleet size and scenario.
 2. Turn System 2 advice on or off.
-3. Select mock or live providers.
+3. Select a reflex controller — with live credentials, switch the **Local controller / Live API** toggle to Live API.
 4. Adjust the confidence threshold.
 5. Launch the mission and switch between drones to inspect their decisions.
 6. Export the mission JSON for deeper analysis.
