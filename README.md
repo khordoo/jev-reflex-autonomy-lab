@@ -103,5 +103,3 @@ Exported telemetry includes the seed, fleet state, observations, probabilities, 
 ## Project status
 
 This is an experimental autonomy visualization, not a production flight controller. The mock scenario and focused runtime checks cover the core simulation behavior. Live fleet success varies with model decisions, provider latency, seed, threshold, and fleet size.
-
-See [LIVE-VALIDATION.md](LIVE-VALIDATION.md) for recorded provider experiments and [HANDOFF.md](HANDOFF.md) for implementation notes.

@@ -20,7 +20,7 @@ Components and files:
 
 Key interfaces: DecisionProvider.decide(DecisionContext, AbortSignal) returns an internal typed Decision; StrategyProvider.plan(PlanningContext, AbortSignal) returns Strategy. These are application contracts, NOT TypeSafe SDK methods. Server adapters map documented vendor responses into these contracts.
 
-Implementation phases: (1) world/sensors/actions and mock loop; (2) real Jev adapter after documentation inspection; (3) real reasoning provider; (4) tune actual confidence distribution and hero scenario. Both live adapters are implemented. See LIVE-VALIDATION.md for measured results and remaining account/service constraints.
+Implementation phases: (1) world/sensors/actions and mock loop; (2) real Jev adapter after documentation inspection; (3) real reasoning provider; (4) tune actual confidence distribution and hero scenario. Both live adapters are implemented.
 
 Integration update: inspected the official TypeSafe quickstart/API reference (https://docs.typesafe.ai/introduction/quickstart and https://docs.typesafe.ai/api, 2026-09-16). The Jev server adapter maps the documented Choice API using `jev-latest` and Bearer authentication. Confidence is NOT assumed equal to selected probability. OpenRouter uses the user-selected `meta/muse-spark-1.3-contributor` with strict structured output and runtime validation. Credentials live in server environment variables; never in browser bundles or committed files.
 
