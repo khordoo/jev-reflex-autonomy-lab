@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jev Reflex Autonomy Lab — Demo</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: #070f17;
+        color: #dce7ee;
+        font: 16px/1.5 system-ui, sans-serif;
+      }
+      main { width: min(1200px, 100%); }
+      video {
+        display: block;
+        width: 100%;
+        border: 1px solid #263746;
+        border-radius: 12px;
+        background: #000;
+        box-shadow: 0 24px 80px #0009;
+      }
+      p { margin: 16px 0 0; text-align: center; }
+      a { color: #b4f574; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <video controls autoplay playsinline poster="media/reflex-dashboard.png">
+        <source src="media/demo.mp4" type="video/mp4" />
+        Your browser does not support MP4 video playback.
+      </video>
+      <p><a href="https://github.com/khordoo/jev-reflex-autonomy-lab">Back to Jev Reflex Autonomy Lab</a></p>
+    </main>
+  </body>
+</html>
