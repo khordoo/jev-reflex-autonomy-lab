@@ -49,6 +49,8 @@ System 2 — OpenRouter / GLM 5.3
 
 System 2 is advisory. It does not fly the drone directly, and Jev does not pause while waiting for it. The confidence chart uses purple only for a Jev decision that actually consumed returned System 2 guidance. The System 2 chart marks response arrival as a discrete event; wall-clock duration is shown separately in the latency chart.
 
+For the runtime model, provider boundaries, and System 1/System 2 request flow, see [Architecture](ARCHITECTURE.md).
+
 ## Run locally
 
 Requirements: Node.js 22.13 or newer.
