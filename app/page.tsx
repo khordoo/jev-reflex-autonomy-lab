@@ -50,7 +50,7 @@ export default function Home() {
   const [running, setRunning] = useState(false),
     [sensors, setSensors] = useState(true),
     [showTrails, setShowTrails] = useState(true),
-    [showUnknowns, setShowUnknowns] = useState(true),
+    [showUnknowns, setShowUnknowns] = useState(false),
     [threshold, setThreshold] = useState(20),
     [mode, setMode] = useState('mock'),
     [plannerMode, setPlannerMode] = useState('mock'),
