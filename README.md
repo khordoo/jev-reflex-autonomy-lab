@@ -15,7 +15,12 @@ Each drone navigates independently with Jev as its System 1 reflex layer. When c
 A short run of the full simulation — launch the fleet, watch Jev steer through a seeded asteroid field, switch to **Live API** for rule-based local decisions with optional System 2 advice, and inspect each drone's telemetry.
 
 <p align="center">
-  <video src="docs/media/demo.mp4" controls preload="metadata" style="max-width:100%; border-radius:8px"></video>
+  <a href="docs/media/demo.mp4">
+    <img src="docs/media/reflex-dashboard.png" alt="Watch the Jev Reflex Autonomy Lab demo" width="90%" />
+  </a>
+</p>
+<p align="center">
+  <a href="docs/media/demo.mp4"><strong>▶ Watch the full simulation demo (MP4, 31 MB)</strong></a>
 </p>
 
 ## What the demo shows
