@@ -32,7 +32,7 @@ import {
   MockStrategyProvider,
   OpenRouterStrategyProvider,
 } from '@/lib/reflex/providers';
-import { createWorld, stepWorld } from '@/lib/reflex/world';
+import { createWorld, MAX_DRONES, stepWorld } from '@/lib/reflex/world';
 import type { World } from '@/lib/reflex/types';
 import { browserRegistry, registerMissionTools } from '@/lib/reflex/webmcp';
 
@@ -558,7 +558,13 @@ export default function Home() {
               setDroneCount(count);
               reset(world.scenario, mode, plannerMode, seed, count);
             }}>
-              {Array.from({ length: 20 }, (_, i) => i + 1).map((count) => <option key={count} value={count}>{count}</option>)}
+              {Array.from({ length: MAX_DRONES }, (_, i) => i + 1).map(
+                (count) => (
+                  <option key={count} value={count}>
+                    {count}
+                  </option>
+                ),
+              )}
             </select>
           </div>
           <div className="setting-row">

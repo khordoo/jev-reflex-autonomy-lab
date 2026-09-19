@@ -10,7 +10,7 @@ export const MAX_SPEED = 90;
 export const ACCELERATION_STEP = 6;
 export const DECELERATION_STEP = 10;
 export const RETREAT_SPEED = 26;
-export const MAX_DRONES = 20;
+export const MAX_DRONES = 15;
 export const wrapAngle = (n: number) => Math.atan2(Math.sin(n), Math.cos(n));
 export function seeded(seed: number) {
   let n = seed >>> 0;
