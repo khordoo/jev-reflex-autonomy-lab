@@ -20,7 +20,7 @@ A short run of the full simulation — launch the fleet, watch Jev steer through
   </a>
 </p>
 <p align="center">
-  <a href="docs/media/demo.mp4"><strong>▶ Watch the full simulation demo (MP4, 31 MB)</strong></a>
+  <a href="docs/media/demo.mp4"><strong>▶ Watch the full simulation demo (MP4, 8 MB)</strong></a>
 </p>
 
 ## What the demo shows
