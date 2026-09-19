@@ -72,28 +72,28 @@ Returned guidance is used by exactly one subsequent Jev request and then discard
 
 ```mermaid
 sequenceDiagram
-    participant Loop as Simulation loop
+    participant Sim as Simulation loop
     participant C as Agent controller
     participant S1 as System 1 / Jev
     participant S2 as System 2 / Planner
 
-    Loop->>C: Tick with latest world
+    Sim->>C: Tick with latest world
     C->>S1: Structured observation
-    Note over Loop,C: Physics and rendering continue
+    Note over Sim,C: Physics and rendering continue
     S1-->>C: Action plus confidence
-    C->>Loop: Apply action
+    C->>Sim: Apply action
 
     alt Confidence below threshold
         C->>S2: Bounded recent context
         loop While planner is pending
             C->>S1: New reflex requests
             S1-->>C: Unguided actions
-            C->>Loop: Apply actions
+            C->>Sim: Apply actions
         end
         S2-->>C: One-use strategy revision
         C->>S1: Next request with guidance
         S1-->>C: Guided action
-        C->>Loop: Apply action and discard guidance
+        C->>Sim: Apply action and discard guidance
     end
 ```
 
