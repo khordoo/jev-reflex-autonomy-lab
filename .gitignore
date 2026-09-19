@@ -19,6 +19,8 @@
 # misc
 .DS_Store
 *.pem
+# Local camera/master media; the losslessly remuxed web MP4 is tracked.
+/docs/media/demo.mov
 
 # debug
 npm-debug.log*
