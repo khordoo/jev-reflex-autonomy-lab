@@ -116,7 +116,7 @@ export function createWorld(
               radius: unknown ? 72 : 15 + random() * 28,
               kind: unknown ? ('UNKNOWN' as const) : ('ASTEROID' as const),
               signal: unknown,
-              activeAt: unknown ? 12 : 0,
+              activeAt: unknown ? 1 : 0,
             };
           }),
   };
@@ -172,27 +172,27 @@ export function stepWorld(world: World, dt: number) {
         const dx = world.destination.x - drone.position.x;
         const dy = world.destination.y - drone.position.y;
         const distance = Math.max(1, Math.hypot(dx, dy));
-        const forward = Math.min(260, distance * 0.6);
-        const offset = (((world.seed * 2654435761) >>> 0) % 81) - 40;
+        const placementSeed = (world.seed * 2654435761) >>> 0;
+        const forward = Math.min(
+          500 + (placementSeed % 101),
+          Math.max(0, distance - 200),
+        );
+        const offsetMagnitude = 100 + ((placementSeed >>> 8) % 61);
+        const preferredSign = (placementSeed & 1) === 0 ? 1 : -1;
+        const baseX = drone.position.x + (dx / distance) * forward;
+        const baseY = drone.position.y + (dy / distance) * forward;
+        const candidate = (sign: number) => ({
+          x: baseX - (dy / distance) * offsetMagnitude * sign,
+          y: baseY + (dx / distance) * offsetMagnitude * sign,
+        });
+        const preferred = candidate(preferredSign);
+        const alternate = candidate(-preferredSign);
+        const inBounds = (point: { x: number; y: number }) =>
+          point.x >= 90 && point.x <= 1510 && point.y >= 90 && point.y <= 630;
+        const position = inBounds(preferred) ? preferred : alternate;
         o.position = {
-          x: Math.max(
-            90,
-            Math.min(
-              1510,
-              drone.position.x +
-                (dx / distance) * forward -
-                (dy / distance) * offset,
-            ),
-          ),
-          y: Math.max(
-            90,
-            Math.min(
-              630,
-              drone.position.y +
-                (dy / distance) * forward +
-                (dx / distance) * offset,
-            ),
-          ),
+          x: Math.max(90, Math.min(1510, position.x)),
+          y: Math.max(90, Math.min(630, position.y)),
         };
       }
       o.position.x += o.velocity.x * dt;
