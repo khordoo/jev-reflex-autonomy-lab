@@ -18,7 +18,7 @@ Each drone navigates independently with Jev as its System 1 reflex layer. When c
 ## What the demo shows
 
 - A configurable fleet of one to fifteen independently controlled drones
-- Moving asteroids, debris, unknown signals, and other drones treated as sensed contacts
+- Moving asteroids, debris, unidentified objects, and other drones treated as sensed contacts
 - A System 2 toggle for running Jev alone or enabling strategic advice
 - Per-drone decisions, confidence, latency, strategy revisions, and collision outcomes
 - Seeded scenarios for repeatable obstacle layouts

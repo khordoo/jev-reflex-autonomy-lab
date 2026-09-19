@@ -167,7 +167,7 @@ export const DecisionCharts = memo(function DecisionCharts({
                 stroke="#607688"
                 strokeDasharray="3 5"
                 label={{
-                  value: 'Unknown detected',
+                  value: 'Unidentified object detected',
                   fill: '#99adbc',
                   fontSize: 12,
                   position: 'insideTopRight',

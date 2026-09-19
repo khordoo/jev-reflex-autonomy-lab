@@ -124,9 +124,9 @@ Mission export includes world state, observations, decisions, thresholds, provid
 
 ## Scenarios and repeatability
 
-The hero scenario is curated. The seeded field uses deterministic pseudo-random geometry and deterministic signal placement for a given seed. A seed reproduces the initial simulation geometry, but live-provider latency and responses can still alter the resulting trajectory.
+The hero scenario is curated. The seeded field uses deterministic pseudo-random geometry and deterministic unidentified-object placement for a given seed. A seed reproduces the initial simulation geometry, but live-provider latency and responses can still alter the resulting trajectory.
 
-Physics owns movement, bounds, collisions, health, battery use, and arrival. Scanning changes an unknown contact's observed classification; it does not prescribe an action.
+Physics owns movement, bounds, collisions, health, battery use, and arrival. Scanning changes an unidentified contact's observed classification; it does not prescribe an action.
 
 ## Code map
 

@@ -7,12 +7,12 @@ import {
   Cloud,
   Cpu,
   Download,
+  Orbit,
   Pause,
   Play,
   Radar,
   Route,
   RotateCcw,
-  Signal,
   Zap,
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
@@ -49,7 +49,7 @@ export default function Home() {
   );
   const [running, setRunning] = useState(false),
     [sensors, setSensors] = useState(true),
-    [showTrails, setShowTrails] = useState(true),
+    [showTrails, setShowTrails] = useState(false),
     [showUnknowns, setShowUnknowns] = useState(false),
     [threshold, setThreshold] = useState(20),
     [mode, setMode] = useState('mock'),
@@ -391,7 +391,7 @@ export default function Home() {
               aria-pressed={showUnknowns}
               onClick={() => setShowUnknowns((v) => !v)}
             >
-              <Signal size={17} /> Unknown signal
+              <Orbit size={17} /> Unidentified object
             </button>
             <div className="scenario-buttons">
               <button

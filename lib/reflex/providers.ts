@@ -110,7 +110,7 @@ export class MockStrategyProvider implements StrategyProvider {
       safetyDistance: 85,
       scanRequired: true,
       rationale:
-        'Unknown signal source on route. Scan to collect evidence, bypass right with 85 m clearance, then resume destination.',
+        'Unidentified object on route. Scan to collect evidence, bypass right with 85 m clearance, then resume destination.',
       revision: c.strategy.revision + 1,
     };
   }
