@@ -72,6 +72,8 @@ npm run build
 
 ## Use live providers
 
+**No TypeSafe API key?** An OpenRouter key is enough to run Jev System 1 and the optional System 2 planner.
+
 Copy the example configuration and add your own keys:
 
 ```bash
@@ -79,16 +81,23 @@ cp .dev.vars.example .dev.vars
 ```
 
 ```dotenv
+# Optional: preferred direct route for System 1
 TYPESAFE_API_KEY=your_key
+
+# Can run both Jev System 1 and the optional System 2 planner
 OPENROUTER_API_KEY=your_key
+
+# Optional; defaults to z-ai/glm-5.3
 OPENROUTER_MODEL=z-ai/glm-5.3
 ```
+
+For the lowest-friction setup, configure only `OPENROUTER_API_KEY`; it can run both Jev System 1 and the optional System 2 planner. When `TYPESAFE_API_KEY` is also present, the app automatically prefers the direct TypeSafe route for System 1. A TypeSafe key by itself can run live System 1 with System 2 turned off. `OPENROUTER_MODEL` is optional.
 
 Restart the development server and refresh provider status in the dashboard, then use the **Local controller / Live API** toggle. The app boots into a **Local controller** — the built-in rule-based reflex, no credentials required — and only when **Live API** is selected do missions run against live TypeSafe Jev (and OpenRouter for System 2). The flight environment is simulated in both modes; the toggle only changes where reflex decisions come from. Selecting Live API sets a 20% starting gate but does not start a mission.
 
 Then press **Launch mission** to begin flying. Adding credentials does not switch providers automatically: select **Live API** when you want to use them. With **Local controller** selected, the mission continues using the built-in reflexes. `.dev.vars` is ignored by Git.
 
-The Jev adapter calls `POST https://api.typesafe.ai/v1/systemone` with `jev-latest` and a typed choice over the available flight actions. The System 2 planner uses OpenRouter's chat completions API with strict structured output. Server errors, rate limits, and context-size failures can retry through the configured fallback model.
+The Jev adapter prefers `POST https://api.typesafe.ai/v1/systemone` with `jev-latest`. Without a direct TypeSafe key, it calls `POST https://openrouter.ai/api/alpha/decisions` with `typesafe/jev-1.13`. Both routes use the same typed choice over the available flight actions. The System 2 planner uses OpenRouter's chat completions API with strict structured output. Server errors, rate limits, and context-size failures can retry through the configured fallback model.
 
 ## Experiment workflow
 

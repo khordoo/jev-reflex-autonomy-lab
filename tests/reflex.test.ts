@@ -38,7 +38,10 @@ import {
 } from '../lib/reflex/planning-context';
 import {
   callJev,
+  callOpenRouterJev,
   jevRequest,
+  OPENROUTER_JEV_ENDPOINT,
+  OPENROUTER_JEV_MODEL,
   parseJevResponse,
 } from '../lib/reflex/jev-server';
 
@@ -145,10 +148,7 @@ test('hero policy encounters uncertainty, follows the mock plan and reaches dest
   }
   assert.ok(uncertainty);
   assert.ok(w.agents.D_01.scanned.includes('unknown_05'));
-  assert.ok(
-    w.agents.D_01.complete,
-    JSON.stringify(w.agents.D_01.position),
-  );
+  assert.ok(w.agents.D_01.complete, JSON.stringify(w.agents.D_01.position));
   assert.equal(
     w.agents.D_01.collisions.length,
     0,
@@ -333,6 +333,54 @@ test('unconfigured Jev reports failure before any network request', async () => 
   assert.equal(jevRequest(context).model, 'jev-latest');
   assert.equal(jevRequest(context).questions.action.type, 'choice');
   c.dispose();
+});
+test('OpenRouter Jev uses the Decisions API and pinned Jev model', async () => {
+  const w = createWorld();
+  const controller = new Controller(
+    new JevDecisionProvider(),
+    new MockStrategyProvider(0),
+  );
+  const context = {
+    agentId: 'D_01',
+    observation: observe(w, 'D_01'),
+    strategy: controller.state('D_01').strategy,
+    mission: 'Transit',
+    actions: ACTIONS,
+  };
+  let url = '';
+  let model = '';
+  const probabilities = Object.fromEntries(
+    ACTIONS.map((action) => [action, action === 'HOLD' ? 1 : 0]),
+  );
+  await callOpenRouterJev(
+    context,
+    'test-key',
+    new AbortController().signal,
+    async (input, init) => {
+      url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      model = JSON.parse(
+        typeof init?.body === 'string' ? init.body : '{}',
+      ).model;
+      return Response.json({
+        answers: {
+          action: {
+            type: 'choice',
+            choice: 'HOLD',
+            confidence: 1,
+            probabilities,
+          },
+        },
+      });
+    },
+  );
+  assert.equal(url, OPENROUTER_JEV_ENDPOINT);
+  assert.equal(model, OPENROUTER_JEV_MODEL);
+  controller.dispose();
 });
 test('invalid distributions are rejected', () => {
   assert.throws(
@@ -623,7 +671,10 @@ test('OpenRouter requests the selected model and strict strategy schema, preserv
         {
           finish_reason: 'stop',
           message: {
-            content: JSON.stringify({ ...content, rationale: 'x'.repeat(1201) }),
+            content: JSON.stringify({
+              ...content,
+              rationale: 'x'.repeat(1201),
+            }),
           },
         },
       ],
@@ -746,7 +797,9 @@ test('planner failures are recorded in the failures list', async () => {
     mode: 'mock' as const,
     plan: () =>
       Promise.reject(
-        new Error('Invalid planner strategy (rationale length 1201 exceeds 900)'),
+        new Error(
+          'Invalid planner strategy (rationale length 1201 exceeds 900)',
+        ),
       ),
   };
   const c = new Controller(confidenceProvider(0.19), planner);

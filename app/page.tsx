@@ -57,6 +57,7 @@ export default function Home() {
     [seed, setSeed] = useState(42);
   const [providerConfig, setProviderConfig] = useState({
     jevConfigured: false,
+    jevProvider: 'none',
     plannerConfigured: false,
     plannerModel: 'z-ai/glm-5.3',
   });
@@ -81,7 +82,9 @@ export default function Home() {
   runningRef.current = running;
   const drones = Object.values(world.agents);
   const arrived = drones.filter((d) => d.complete).length;
-  const lost = drones.filter((d) => d.health <= 0 || (!d.complete && d.battery <= 0)).length;
+  const lost = drones.filter(
+    (d) => d.health <= 0 || (!d.complete && d.battery <= 0),
+  ).length;
   const finished = arrived + lost === drones.length;
   const control = controller.state(selectedAgent),
     drone = world.agents[selectedAgent] ?? drones[0],
@@ -101,7 +104,12 @@ export default function Home() {
       health: drone.health,
       complete: drone.complete,
       system2Enabled,
-      agents: drones.map((d) => ({ id: d.id, health: d.health, complete: d.complete, position: d.position })),
+      agents: drones.map((d) => ({
+        id: d.id,
+        health: d.health,
+        complete: d.complete,
+        position: d.position,
+      })),
     }),
     run: async (value) => {
       if (value && finished)
@@ -132,8 +140,14 @@ export default function Home() {
         .filter((d) => !d.complete && d.health > 0 && d.battery > 0)
         .sort(
           (a, b) =>
-            Math.hypot(world.destination.x - a.position.x, world.destination.y - a.position.y) -
-            Math.hypot(world.destination.x - b.position.x, world.destination.y - b.position.y),
+            Math.hypot(
+              world.destination.x - a.position.x,
+              world.destination.y - a.position.y,
+            ) -
+            Math.hypot(
+              world.destination.x - b.position.x,
+              world.destination.y - b.position.y,
+            ),
         )[0];
       if (next) setSelectedAgent(next.id);
     }
@@ -219,8 +233,12 @@ export default function Home() {
             droneCount: drones.length,
             system2Enabled,
             world,
-            events: Object.values(controller.agents).flatMap((agent) => agent.telemetry).sort((a, b) => a.simulationTime - b.simulationTime),
-            planningEvents: Object.values(controller.agents).flatMap((agent) => agent.planningEvents).sort((a, b) => a.startedAt - b.startedAt),
+            events: Object.values(controller.agents)
+              .flatMap((agent) => agent.telemetry)
+              .sort((a, b) => a.simulationTime - b.simulationTime),
+            planningEvents: Object.values(controller.agents)
+              .flatMap((agent) => agent.planningEvents)
+              .sort((a, b) => a.startedAt - b.startedAt),
             failures: controller.failures,
           },
           null,
@@ -245,7 +263,10 @@ export default function Home() {
     ),
     destinationProgress = Math.min(
       100,
-      Math.max(0, (1 - distanceToDestination / INITIAL_DESTINATION_DISTANCE) * 100),
+      Math.max(
+        0,
+        (1 - distanceToDestination / INITIAL_DESTINATION_DISTANCE) * 100,
+      ),
     );
   return (
     <main>
@@ -280,7 +301,11 @@ export default function Home() {
               : 'MIXED PROVIDERS'}
           <small>
             {mode === 'mock' ? 'Mock reflexes' : 'TypeSafe Jev'} ·{' '}
-            {!system2Enabled ? 'System 2 off' : plannerMode === 'mock' ? 'mock planner' : 'GLM 5.3 planner'}
+            {!system2Enabled
+              ? 'System 2 off'
+              : plannerMode === 'mock'
+                ? 'mock planner'
+                : 'GLM 5.3 planner'}
           </small>
         </div>
       </section>
@@ -296,12 +321,21 @@ export default function Home() {
             </span>
           </div>
           <div className="map">
-            <MissionCanvas world={world} sensors={sensors} showTrails={showTrails} showUnknowns={showUnknowns} />
+            <MissionCanvas
+              world={world}
+              sensors={sensors}
+              showTrails={showTrails}
+              showUnknowns={showUnknowns}
+            />
             <div className="map-key">
               <span>
                 <svg viewBox="-14 -12 35 24" aria-hidden="true">
-                  <polygon points="21,0 -14,-12 -7,0 -14,12" fill="currentColor" />
-                </svg> DRONE
+                  <polygon
+                    points="21,0 -14,-12 -7,0 -14,12"
+                    fill="currentColor"
+                  />
+                </svg>{' '}
+                DRONE
               </span>
               <span>○ OBJECT</span>
               <span>⌁ SENSOR LINK</span>
@@ -316,7 +350,10 @@ export default function Home() {
             )}
             {finished && arrived > 0 && (
               <div className="escalation-banner success">
-                <strong>MISSION FINISHED · {arrived}/{drones.length} ARRIVED · {lost} LOST</strong>
+                <strong>
+                  MISSION FINISHED · {arrived}/{drones.length} ARRIVED · {lost}{' '}
+                  LOST
+                </strong>
               </div>
             )}
             {finished && arrived === 0 && (
@@ -328,17 +365,37 @@ export default function Home() {
           <div className="flight-stats">
             <div>
               <span>AGENT</span>
-              <select aria-label="Selected drone" value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)}>
-                {drones.map((d) => <option key={d.id} value={d.id}>{d.id} · {d.complete ? 'Arrived' : d.health <= 0 ? 'Lost' : d.battery <= 0 ? 'Out of battery' : 'Active'}</option>)}
+              <select
+                aria-label="Selected drone"
+                value={selectedAgent}
+                onChange={(e) => setSelectedAgent(e.target.value)}
+              >
+                {drones.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.id} ·{' '}
+                    {d.complete
+                      ? 'Arrived'
+                      : d.health <= 0
+                        ? 'Lost'
+                        : d.battery <= 0
+                          ? 'Out of battery'
+                          : 'Active'}
+                  </option>
+                ))}
               </select>
-              <small>{arrived} arrived · {drones.length - arrived - lost} active · {lost} lost</small>
+              <small>
+                {arrived} arrived · {drones.length - arrived - lost} active ·{' '}
+                {lost} lost
+              </small>
             </div>
             <div>
               <span>VELOCITY</span>
               <strong>
                 {world.time === 0
                   ? '0'
-                  : Math.hypot(drone.velocity.x, drone.velocity.y).toFixed(0)}{' '}
+                  : Math.hypot(drone.velocity.x, drone.velocity.y).toFixed(
+                      0,
+                    )}{' '}
                 <small>m/s</small>
               </strong>
             </div>
@@ -420,12 +477,20 @@ export default function Home() {
             <div className="system-name">
               Jev <span>/ reflex layer</span>
             </div>
-            <p className="question">{drone.id} · “What should I do right now?”</p>
+            <p className="question">
+              {drone.id} · “What should I do right now?”
+            </p>
             <div className="action">
               <ArrowUpRight size={32} />
               <strong>
-                {drone.health <= 0 ? 'LOST' : drone.complete ? 'ARRIVED' : drone.battery <= 0 ? 'OUT OF BATTERY' : control.decision?.action.replaceAll('_', ' ') ??
-                  'AWAITING INPUT'}
+                {drone.health <= 0
+                  ? 'LOST'
+                  : drone.complete
+                    ? 'ARRIVED'
+                    : drone.battery <= 0
+                      ? 'OUT OF BATTERY'
+                      : (control.decision?.action.replaceAll('_', ' ') ??
+                        'AWAITING INPUT')}
               </strong>
             </div>
             <div className="decision-numbers">
@@ -472,9 +537,11 @@ export default function Home() {
           </section>
           <div className={'bridge ' + (control.planning ? 'active' : '')}>
             <ArrowDown size={15} />
-            {!system2Enabled ? 'SYSTEM 2 OFF · JEV STEERING' : control.planning
-              ? 'SYSTEM 2 PLANNING · JEV STILL STEERING'
-              : 'UNCERTAINTY TRIGGERS REASONING'}
+            {!system2Enabled
+              ? 'SYSTEM 2 OFF · JEV STEERING'
+              : control.planning
+                ? 'SYSTEM 2 PLANNING · JEV STILL STEERING'
+                : 'UNCERTAINTY TRIGGERS REASONING'}
           </div>
           <section
             className={'system-two ' + (control.planning ? 'thinking' : '')}
@@ -482,11 +549,13 @@ export default function Home() {
             <div className="system-title">
               <span>✳ SYSTEM 2</span>
               <span className="chip">
-                {!system2Enabled ? 'DISABLED' : control.planning
-                  ? 'PLANNING'
-                  : control.guidancePending
-                    ? 'STRATEGY SET'
-                    : 'STANDBY'}
+                {!system2Enabled
+                  ? 'DISABLED'
+                  : control.planning
+                    ? 'PLANNING'
+                    : control.guidancePending
+                      ? 'STRATEGY SET'
+                      : 'STANDBY'}
               </span>
             </div>
             <div className="system-name">
@@ -504,7 +573,11 @@ export default function Home() {
                   ? 'Preserve. Progress. Arrive.'
                   : `${control.strategy.scanRequired ? 'Scan. ' : ''}Bypass ${control.strategy.preferredSide}. Resume.`}
               </strong>
-              <p>{system2Enabled ? control.strategy.rationale : 'Each drone navigates independently using System 1. No advisory requests are sent.'}</p>
+              <p>
+                {system2Enabled
+                  ? control.strategy.rationale
+                  : 'Each drone navigates independently using System 1. No advisory requests are sent.'}
+              </p>
             </div>
             <div className="planner-foot">
               <span>
@@ -553,11 +626,15 @@ export default function Home() {
           <h2>Experiment controls</h2>
           <div className="setting-row">
             <label htmlFor="drone-count">Number of drones</label>
-            <select id="drone-count" value={droneCount} onChange={(e) => {
-              const count = Number(e.target.value);
-              setDroneCount(count);
-              reset(world.scenario, mode, plannerMode, seed, count);
-            }}>
+            <select
+              id="drone-count"
+              value={droneCount}
+              onChange={(e) => {
+                const count = Number(e.target.value);
+                setDroneCount(count);
+                reset(world.scenario, mode, plannerMode, seed, count);
+              }}
+            >
               {Array.from({ length: MAX_DRONES }, (_, i) => i + 1).map(
                 (count) => (
                   <option key={count} value={count}>
@@ -578,13 +655,24 @@ export default function Home() {
               onClick={() => {
                 const enabled = !system2Enabled;
                 setSystem2Enabled(enabled);
-                reset(world.scenario, mode, plannerMode, seed, droneCount, enabled);
+                reset(
+                  world.scenario,
+                  mode,
+                  plannerMode,
+                  seed,
+                  droneCount,
+                  enabled,
+                );
               }}
             >
               <i />
             </button>
           </div>
-          <p>Changing fleet size or System 2 starts a fresh mission. Select a drone above to inspect its decisions. An obstacle impact removes that drone; the others continue.</p>
+          <p>
+            Changing fleet size or System 2 starts a fresh mission. Select a
+            drone above to inspect its decisions. An obstacle impact removes
+            that drone; the others continue.
+          </p>
           <div className="setting-label">
             <label id="threshold-label">Escalation threshold</label>
             <strong>{threshold}%</strong>
@@ -598,8 +686,8 @@ export default function Home() {
             onValueChange={(v) => setThreshold(Array.isArray(v) ? v[0] : v)}
           />
           <p>
-            Confidence below the threshold alone requests a strategy,
-            regardless of the objects present.
+            Confidence below the threshold alone requests a strategy, regardless
+            of the objects present.
           </p>
           <div className="setting-row">
             <label htmlFor="provider">Decision provider</label>
@@ -647,8 +735,10 @@ export default function Home() {
           </div>
           <div className="provider-setup">
             <span className={providerConfig.jevConfigured ? 'lime' : 'muted'}>
-              Jev key:{' '}
-              {providerConfig.jevConfigured ? 'configured' : 'not configured'}
+              Jev:{' '}
+              {providerConfig.jevConfigured
+                ? `configured via ${providerConfig.jevProvider}`
+                : 'not configured'}
             </span>
             <span
               className={providerConfig.plannerConfigured ? 'purple' : 'muted'}
@@ -701,10 +791,14 @@ export default function Home() {
             </button>
           </div>
           <p>
-            Local controller: runs the built-in rule-based reflexes with no credentials.
-            Live API: live TypeSafe Jev{system2Enabled ? ' + GLM 5.3' : ' only'} over the network.
-            The flight environment stays simulated in both modes.
-            {mode === 'jev' ? ' Live mode sets a 20% starting gate; the gate remains adjustable.' : ''}
+            Local controller: runs the built-in rule-based reflexes with no
+            credentials. Live API: live TypeSafe Jev via{' '}
+            {providerConfig.jevProvider}
+            {system2Enabled ? ' + GLM 5.3' : ' only'} over the network. The
+            flight environment stays simulated in both modes.
+            {mode === 'jev'
+              ? ' Live mode sets a 20% starting gate; the gate remains adjustable.'
+              : ''}
           </p>
           <div className="setting-row">
             <label htmlFor="seed">Scenario seed</label>
