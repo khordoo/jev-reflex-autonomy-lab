@@ -124,6 +124,53 @@ test('physics executes discrete actions and scanning updates observable classifi
     'DEBRIS',
   );
 });
+test('a deep asteroid impact destroys the drone', () => {
+  const w = createWorld();
+  const d = w.agents.D_01;
+  d.position = { x: 89, y: 100 };
+  d.velocity = { x: 52, y: 0 };
+  w.objects = [
+    {
+      id: 'impact',
+      position: { x: 100, y: 100 },
+      velocity: { x: 0, y: 0 },
+      radius: 30,
+      kind: 'ASTEROID',
+      signal: false,
+      activeAt: 0,
+    },
+  ];
+
+  stepWorld(w, 0.1);
+
+  assert.equal(d.health, 0);
+  assert.deepEqual(d.velocity, { x: 0, y: 0 });
+  assert.deepEqual(d.collisions, ['impact']);
+});
+test('an outer-edge asteroid impact damages and deflects the drone', () => {
+  const w = createWorld();
+  const d = w.agents.D_01;
+  d.position = { x: 89, y: 138 };
+  d.velocity = { x: 52, y: 0 };
+  w.objects = [
+    {
+      id: 'graze',
+      position: { x: 100, y: 100 },
+      velocity: { x: 0, y: 0 },
+      radius: 30,
+      kind: 'ASTEROID',
+      signal: false,
+      activeAt: 0,
+    },
+  ];
+
+  stepWorld(w, 0.1);
+
+  assert.equal(d.health, 75);
+  assert.deepEqual(d.collisions, ['graze']);
+  assert.ok(Math.hypot(d.position.x - 100, d.position.y - 100) >= 40);
+  assert.notEqual(d.velocity.y, 0);
+});
 test('hero policy encounters uncertainty, follows the mock plan and reaches destination', () => {
   const w = createWorld();
   const c = new Controller(
