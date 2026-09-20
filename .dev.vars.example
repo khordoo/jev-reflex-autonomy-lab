@@ -1,6 +1,8 @@
-# Copy to .dev.vars for local development. TypeSafe direct is preferred when set;
-# otherwise OPENROUTER_API_KEY also runs Jev through OpenRouter's Decisions API.
-TYPESAFE_API_KEY=
+# Copy to .dev.vars for local development. This key can run both systems.
 OPENROUTER_API_KEY=
+
+# Optional: uncomment to prefer the direct TypeSafe route for System 1.
+# TYPESAFE_API_KEY=
+
 # Optional System 2 override; defaults to z-ai/glm-5.3.
-OPENROUTER_MODEL=z-ai/glm-5.3
+# OPENROUTER_MODEL=z-ai/glm-5.3
