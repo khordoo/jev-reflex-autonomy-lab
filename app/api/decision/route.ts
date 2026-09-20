@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import { callJev } from '@/lib/reflex/jev-server';
+import { callJev, callOpenRouterJev } from '@/lib/reflex/jev-server';
 import type { DecisionContext } from '@/lib/reflex/types';
 export async function POST(request: Request) {
   const origin = request.headers.get('origin');
@@ -28,14 +28,17 @@ export async function POST(request: Request) {
         { error: 'Invalid decision context' },
         { status: 400 },
       );
-    const key =
+    const typesafeKey =
       (env as { TYPESAFE_API_KEY?: string }).TYPESAFE_API_KEY ||
       process.env.TYPESAFE_API_KEY;
+    const openRouterKey =
+      (env as { OPENROUTER_API_KEY?: string }).OPENROUTER_API_KEY ||
+      process.env.OPENROUTER_API_KEY;
     const deadline = performance.now() + 5500;
     const attempt = () =>
-      callJev(
+      (typesafeKey ? callJev : callOpenRouterJev)(
         context,
-        key,
+        typesafeKey || openRouterKey,
         AbortSignal.any([
           request.signal,
           AbortSignal.timeout(

@@ -103,7 +103,7 @@ Planning context is compacted to the 12 most recent observations and 12 most rec
 
 Browser providers call same-origin routes under `app/api`; credentials remain in server environment variables.
 
-- `POST /api/decision` maps the internal decision contract to the TypeSafe Jev API. A transient Jev 5xx response is retried once within the request deadline.
+- `POST /api/decision` maps the internal decision contract to Jev. It prefers the direct TypeSafe API when `TYPESAFE_API_KEY` is configured and otherwise uses OpenRouter's Decisions API with `OPENROUTER_API_KEY`. A transient Jev 5xx response is retried once within the request deadline.
 - `POST /api/strategy` sends the compact planning context to OpenRouter. GLM 5.3 is the default planner; rate limits and 5xx responses retry once through the fallback model.
 - Client requests have bounded timeouts, abort on reset or disposal, and ignore stale results from an earlier controller generation.
 - Invalid payloads and provider outputs are rejected before they can change the world.
@@ -130,15 +130,15 @@ Physics owns movement, bounds, collisions, health, battery use, and arrival. Sca
 
 ## Code map
 
-| Area | Primary files |
-| --- | --- |
-| World and physics | `lib/reflex/world.ts` |
-| Sensors and projections | `lib/reflex/sensors.ts`, `lib/reflex/action-projection.ts` |
-| Agent orchestration | `lib/reflex/controller.ts`, `lib/reflex/planning-context.ts` |
-| Provider contracts and proxies | `lib/reflex/types.ts`, `lib/reflex/providers.ts` |
-| Server adapters | `lib/reflex/jev-server.ts`, `lib/reflex/openrouter-server.ts` |
-| API boundary | `app/api/decision/route.ts`, `app/api/strategy/route.ts` |
-| Canvas rendering | `components/mission-canvas.tsx` |
-| Telemetry charts | `lib/reflex/chart-data.ts`, `components/decision-charts.tsx` |
-| Dashboard and experiment controls | `app/page.tsx` |
-| Runtime checks | `tests/reflex.test.ts` |
+| Area                              | Primary files                                                 |
+| --------------------------------- | ------------------------------------------------------------- |
+| World and physics                 | `lib/reflex/world.ts`                                         |
+| Sensors and projections           | `lib/reflex/sensors.ts`, `lib/reflex/action-projection.ts`    |
+| Agent orchestration               | `lib/reflex/controller.ts`, `lib/reflex/planning-context.ts`  |
+| Provider contracts and proxies    | `lib/reflex/types.ts`, `lib/reflex/providers.ts`              |
+| Server adapters                   | `lib/reflex/jev-server.ts`, `lib/reflex/openrouter-server.ts` |
+| API boundary                      | `app/api/decision/route.ts`, `app/api/strategy/route.ts`      |
+| Canvas rendering                  | `components/mission-canvas.tsx`                               |
+| Telemetry charts                  | `lib/reflex/chart-data.ts`, `components/decision-charts.tsx`  |
+| Dashboard and experiment controls | `app/page.tsx`                                                |
+| Runtime checks                    | `tests/reflex.test.ts`                                        |

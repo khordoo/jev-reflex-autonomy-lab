@@ -10,7 +10,12 @@ import {
   RETREAT_SPEED,
 } from './world';
 // Verified 2026-09-16: https://docs.typesafe.ai/introduction/quickstart and /api.
-export function jevRequest(context: DecisionContext) {
+export const TYPESAFE_JEV_ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
+export const OPENROUTER_JEV_ENDPOINT =
+  'https://openrouter.ai/api/alpha/decisions';
+export const OPENROUTER_JEV_MODEL = 'typesafe/jev-1.13';
+
+export function jevRequest(context: DecisionContext, model = 'jev-latest') {
   const projections = actionProjections(context.observation);
   const safeForwardActionExists = [
     'HOLD',
@@ -26,7 +31,7 @@ export function jevRequest(context: DecisionContext) {
   );
   if (safeForwardActionExists) delete projections.RETREAT;
   const request = {
-    model: 'jev-latest',
+    model,
     state: {
       agentId: context.agentId,
       mission: context.mission,
@@ -54,7 +59,8 @@ export function jevRequest(context: DecisionContext) {
           ],
           projection_semantics: {
             horizon_seconds: 8,
-            arrival_cutoff: 'Each action projection ends at arrival if earlier than eight seconds. Hazards after arrival are irrelevant; the mission stops within 35 metres of the destination.',
+            arrival_cutoff:
+              'Each action projection ends at arrival if earlier than eight seconds. Hazards after arrival are irrelevant; the mission stops within 35 metres of the destination.',
             meaning:
               'Neutral constant-velocity outcomes for every available action; they are measurements, not recommendations.',
             collision_boundary:
@@ -198,9 +204,47 @@ export async function callJev(
     throw new Error(
       'Jev unavailable: set TYPESAFE_API_KEY in the server environment. No mock fallback.',
     );
+  return callJevEndpoint(
+    context,
+    key,
+    signal,
+    TYPESAFE_JEV_ENDPOINT,
+    'jev-latest',
+    transport,
+  );
+}
+
+export async function callOpenRouterJev(
+  context: DecisionContext,
+  key: string | undefined,
+  signal: AbortSignal,
+  transport: typeof fetch = fetch,
+) {
+  if (!key)
+    throw new Error(
+      'Jev unavailable: set TYPESAFE_API_KEY or OPENROUTER_API_KEY in the server environment. No mock fallback.',
+    );
+  return callJevEndpoint(
+    context,
+    key,
+    signal,
+    OPENROUTER_JEV_ENDPOINT,
+    OPENROUTER_JEV_MODEL,
+    transport,
+  );
+}
+
+async function callJevEndpoint(
+  context: DecisionContext,
+  key: string,
+  signal: AbortSignal,
+  endpoint: string,
+  model: string,
+  transport: typeof fetch,
+) {
   const start = performance.now();
-  const request = jevRequest(context);
-  const response = await transport('https://api.typesafe.ai/v1/systemone', {
+  const request = jevRequest(context, model);
+  const response = await transport(endpoint, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${key}`,
