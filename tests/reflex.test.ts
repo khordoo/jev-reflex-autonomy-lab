@@ -53,6 +53,18 @@ test('seeded world is repeatable and one agent is instantiated', () => {
   );
   assert.deepEqual(Object.keys(createWorld().agents), ['D_01']);
 });
+test('disabling the unidentified object removes it from world and sensing', () => {
+  for (const scenario of ['hero', 'seeded'] as const) {
+    const world = createWorld(scenario, 42, 1, false);
+    assert.equal(world.objects.some((object) => object.kind === 'UNKNOWN'), false);
+    assert.equal(
+      observe(world, 'D_01').detections.some(
+        (detection) => detection.classification === 'UNKNOWN',
+      ),
+      false,
+    );
+  }
+});
 test('physics projections omit ineffective actions without choosing a maneuver', () => {
   const w = createWorld();
   w.objects = [];

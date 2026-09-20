@@ -1,4 +1,4 @@
-import type { Action, Drone, World } from './types';
+import type { Action, Drone, SpaceObject, World } from './types';
 export const ARRIVAL_RADIUS = 35;
 export const DRONE_RADIUS = 10;
 export const DOCK_SLOTS = 12;
@@ -23,6 +23,7 @@ export function createWorld(
   scenario: World['scenario'] = 'hero',
   seed = 42,
   droneCount = 1,
+  includeUnknown = true,
 ): World {
   const random = seeded(seed);
   return {
@@ -47,7 +48,7 @@ export function createWorld(
         complete: false,
       }];
     })),
-    objects:
+    objects: ((
       scenario === 'hero'
         ? [
             {
@@ -118,7 +119,10 @@ export function createWorld(
               signal: unknown,
               activeAt: unknown ? 1 : 0,
             };
-          }),
+          })
+    ) as SpaceObject[]).filter(
+      (object) => includeUnknown || object.kind !== 'UNKNOWN',
+    ),
   };
 }
 export function applyAction(world: World, agentId: string, action: Action) {

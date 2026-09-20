@@ -42,7 +42,9 @@ export default function Home() {
   const [droneCount, setDroneCount] = useState(3);
   const [system2Enabled, setSystem2Enabled] = useState(true);
   const [selectedAgent, setSelectedAgent] = useState('D_01');
-  const [world, setWorld] = useState(() => createWorld('seeded', 42, 3));
+  const [world, setWorld] = useState(() =>
+    createWorld('seeded', 42, 3, false),
+  );
   const [controller, setController] = useState(
     () =>
       new Controller(new MockDecisionProvider(), new MockStrategyProvider()),
@@ -50,7 +52,7 @@ export default function Home() {
   const [running, setRunning] = useState(false),
     [sensors, setSensors] = useState(true),
     [showTrails, setShowTrails] = useState(false),
-    [showUnknowns, setShowUnknowns] = useState(false),
+    [unknownEnabled, setUnknownEnabled] = useState(false),
     [threshold, setThreshold] = useState(20),
     [mode, setMode] = useState('mock'),
     [plannerMode, setPlannerMode] = useState('mock'),
@@ -201,12 +203,15 @@ export default function Home() {
     nextSeed = seed,
     nextCount = droneCount,
     nextSystem2 = system2Enabled,
+    nextUnknownEnabled = unknownEnabled,
   ) {
     controller.dispose();
     setRunning(false);
     setChartTime(0);
     setSelectedAgent('D_01');
-    setWorld(createWorld(scenario, nextSeed, nextCount));
+    setWorld(
+      createWorld(scenario, nextSeed, nextCount, nextUnknownEnabled),
+    );
     const next = new Controller(
       provider === 'mock'
         ? new MockDecisionProvider()
@@ -325,7 +330,6 @@ export default function Home() {
               world={world}
               sensors={sensors}
               showTrails={showTrails}
-              showUnknowns={showUnknowns}
             />
             <div className="map-key">
               <span>
@@ -444,9 +448,21 @@ export default function Home() {
               <Route size={17} /> Trails
             </button>
             <button
-              className={'text-button ' + (showUnknowns ? 'selected' : '')}
-              aria-pressed={showUnknowns}
-              onClick={() => setShowUnknowns((v) => !v)}
+              className={'text-button ' + (unknownEnabled ? 'selected' : '')}
+              aria-pressed={unknownEnabled}
+              onClick={() => {
+                const enabled = !unknownEnabled;
+                setUnknownEnabled(enabled);
+                reset(
+                  world.scenario,
+                  mode,
+                  plannerMode,
+                  seed,
+                  droneCount,
+                  system2Enabled,
+                  enabled,
+                );
+              }}
             >
               <Orbit size={17} /> Unidentified object
             </button>
@@ -669,9 +685,9 @@ export default function Home() {
             </button>
           </div>
           <p>
-            Changing fleet size or System 2 starts a fresh mission. Select a
-            drone above to inspect its decisions. An obstacle impact removes
-            that drone; the others continue.
+            Changing fleet size, the unidentified object, or System 2 starts a
+            fresh mission. Select a drone above to inspect its decisions. An
+            obstacle impact removes that drone; the others continue.
           </p>
           <div className="setting-label">
             <label id="threshold-label">Escalation threshold</label>

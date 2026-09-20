@@ -6,12 +6,10 @@ export function MissionCanvas({
   world,
   sensors,
   showTrails,
-  showUnknowns,
 }: {
   world: World;
   sensors: boolean;
   showTrails: boolean;
-  showUnknowns: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -63,7 +61,6 @@ export function MissionCanvas({
       for (const o of world.objects) {
         if (world.time < o.activeAt) continue;
         const unknown = o.kind === 'UNKNOWN';
-        if (unknown && !showUnknowns) continue;
         ctx.strokeStyle = unknown ? '#eeb575' : '#607585';
         ctx.fillStyle = unknown ? '#372d27' : '#24333e';
         ctx.lineWidth = 2;
@@ -194,7 +191,7 @@ export function MissionCanvas({
     };
     render();
     return () => cancelAnimationFrame(frame);
-  }, [world, sensors, showTrails, showUnknowns]);
+  }, [world, sensors, showTrails]);
   return (
     <canvas
       ref={ref}
