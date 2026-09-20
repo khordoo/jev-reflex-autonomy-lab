@@ -78,22 +78,23 @@ Copy the example configuration and add your own keys:
 cp .dev.vars.example .dev.vars
 ```
 
-```dotenv
-# Runs Jev System 1 and the optional System 2 planner
-OPENROUTER_API_KEY=your_key
-
-# Optional: uncomment to prefer the direct TypeSafe route for System 1
-# TYPESAFE_API_KEY=your_key
-
-# Optional System 2 override; defaults to z-ai/glm-5.3
-# OPENROUTER_MODEL=z-ai/glm-5.3
-```
-
 **No TypeSafe API key?** An OpenRouter key is enough to run the complete experiment.
 
 - **OpenRouter only:** runs Jev System 1 and the optional System 2 planner.
 - **Both keys:** uses TypeSafe directly for System 1 and OpenRouter for System 2.
 - **TypeSafe only:** runs live System 1 when System 2 is turned off.
+
+### Recommended setup
+
+Use OpenRouter for both systems: add your OpenRouter key and you are ready to run.
+
+```dotenv
+OPENROUTER_API_KEY=your_key
+OPENROUTER_MODEL=z-ai/glm-5.3
+
+# Optional: uncomment to prefer the direct TypeSafe route for System 1
+# TYPESAFE_API_KEY=your_key
+```
 
 Restart the development server and refresh provider status in the dashboard, then use the **Local controller / Live API** toggle. The app boots into a **Local controller** — the built-in rule-based reflex, no credentials required — and only when **Live API** is selected do missions run against live TypeSafe Jev (and OpenRouter for System 2). The flight environment is simulated in both modes; the toggle only changes where reflex decisions come from. Selecting Live API sets a 20% starting gate but does not start a mission.
 
