@@ -1,6 +1,7 @@
 import type { Action, Drone, SpaceObject, World } from './types';
 export const ARRIVAL_RADIUS = 35;
 export const DRONE_RADIUS = 10;
+export const GLANCING_PENETRATION_LIMIT = 0.1;
 export const DOCK_SLOTS = 12;
 export const DOCK_RING_RADIUS = ARRIVAL_RADIUS + 11;
 export const TURN_RATE = 0.22;
@@ -12,6 +13,69 @@ export const DECELERATION_STEP = 10;
 export const RETREAT_SPEED = 26;
 export const MAX_DRONES = 15;
 export const wrapAngle = (n: number) => Math.atan2(Math.sin(n), Math.cos(n));
+
+function projectedImpactPenetration(d: Drone, o: SpaceObject) {
+  const relativePosition = {
+    x: d.position.x - o.position.x,
+    y: d.position.y - o.position.y,
+  };
+  const relativeVelocity = {
+    x: d.velocity.x - o.velocity.x,
+    y: d.velocity.y - o.velocity.y,
+  };
+  const speedSquared =
+    relativeVelocity.x ** 2 + relativeVelocity.y ** 2;
+  const closestTime =
+    speedSquared > 0.001
+      ? Math.max(
+          0,
+          -(
+            relativePosition.x * relativeVelocity.x +
+            relativePosition.y * relativeVelocity.y
+          ) / speedSquared,
+        )
+      : 0;
+  const closestDistance = Math.hypot(
+    relativePosition.x + relativeVelocity.x * closestTime,
+    relativePosition.y + relativeVelocity.y * closestTime,
+  );
+  return Math.max(
+    0,
+    1 - closestDistance / (o.radius + DRONE_RADIUS),
+  );
+}
+
+function resolveGlancingImpact(d: Drone, o: SpaceObject) {
+  const collisionRadius = o.radius + DRONE_RADIUS;
+  let normalX = d.position.x - o.position.x;
+  let normalY = d.position.y - o.position.y;
+  let normalLength = Math.hypot(normalX, normalY);
+  if (normalLength < 0.001) {
+    normalX = o.velocity.x - d.velocity.x;
+    normalY = o.velocity.y - d.velocity.y;
+    normalLength = Math.hypot(normalX, normalY) || 1;
+  }
+  normalX /= normalLength;
+  normalY /= normalLength;
+
+  d.position = {
+    x: o.position.x + normalX * (collisionRadius + 0.01),
+    y: o.position.y + normalY * (collisionRadius + 0.01),
+  };
+
+  const relativeX = d.velocity.x - o.velocity.x;
+  const relativeY = d.velocity.y - o.velocity.y;
+  const inwardSpeed = relativeX * normalX + relativeY * normalY;
+  const reflectedX =
+    inwardSpeed < 0 ? relativeX - 1.2 * inwardSpeed * normalX : relativeX;
+  const reflectedY =
+    inwardSpeed < 0 ? relativeY - 1.2 * inwardSpeed * normalY : relativeY;
+  d.velocity = {
+    x: o.velocity.x + reflectedX * 0.65,
+    y: o.velocity.y + reflectedY * 0.65,
+  };
+  d.heading = Math.atan2(d.velocity.y, d.velocity.x);
+}
 export function seeded(seed: number) {
   let n = seed >>> 0;
   return () => {
@@ -221,9 +285,11 @@ export function stepWorld(world: World, dt: number) {
         !d.collisions.includes(o.id)
       ) {
         d.collisions.push(o.id);
-        const criticalImpact = o.radius >= 60;
-        d.health = criticalImpact ? 0 : Math.max(0, d.health - 25);
-        if (criticalImpact) d.velocity = { x: 0, y: 0 };
+        const fatalImpact =
+          projectedImpactPenetration(d, o) > GLANCING_PENETRATION_LIMIT;
+        d.health = fatalImpact ? 0 : Math.max(0, d.health - 25);
+        if (fatalImpact) d.velocity = { x: 0, y: 0 };
+        else resolveGlancingImpact(d, o);
       }
     const arrived =
       d.health > 0 &&
