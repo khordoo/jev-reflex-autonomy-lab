@@ -78,15 +78,10 @@ Copy the example configuration and add your own keys:
 cp .dev.vars.example .dev.vars
 ```
 
-**No TypeSafe API key?** An OpenRouter key is enough to run the complete experiment.
-
-- **OpenRouter only:** runs Jev System 1 and the optional System 2 planner.
-- **Both keys:** uses TypeSafe directly for System 1 and OpenRouter for System 2.
-- **TypeSafe only:** runs live System 1 when System 2 is turned off.
-
-### Recommended setup
-
-Use OpenRouter for both systems: add your OpenRouter key and you are ready to run.
+For the simplest setup, use OpenRouter for both Jev System 1 and the System 2
+language model—the configuration below is all you need. If you have direct
+TypeSafe access, uncomment `TYPESAFE_API_KEY` and add your key; the app will
+prefer it for Jev while continuing to use OpenRouter for System 2.
 
 ```dotenv
 OPENROUTER_API_KEY=your_key
