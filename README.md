@@ -72,35 +72,33 @@ npm run build
 
 ## Use live providers
 
-Copy the example configuration and add your own keys:
+1. Copy the example configuration:
 
-```bash
-cp .dev.vars.example .dev.vars
-```
+   ```bash
+   cp .dev.vars.example .dev.vars
+   ```
 
-For the simplest setup, use OpenRouter for both Jev System 1 and the System 2
-language model—the configuration below is all you need. If you have direct
-TypeSafe access, uncomment `TYPESAFE_API_KEY` and add your key; the app will
-prefer it for Jev while continuing to use OpenRouter for System 2.
+2. Add your credentials. For the simplest setup, use OpenRouter for both Jev
+   System 1 and the System 2 language model. The configuration below is all you
+   need. If you have direct TypeSafe access, uncomment `TYPESAFE_API_KEY` and
+   add your key; the app will prefer it for Jev while continuing to use
+   OpenRouter for System 2.
 
-```dotenv
-OPENROUTER_API_KEY=your_key
-OPENROUTER_MODEL=z-ai/glm-5.3
+   ```dotenv
+   OPENROUTER_API_KEY=your_key
+   OPENROUTER_MODEL=z-ai/glm-5.3
 
-# Optional: uncomment to prefer the direct TypeSafe route for System 1
-# TYPESAFE_API_KEY=your_key
-```
+   # Optional: uncomment to prefer the direct TypeSafe route for System 1
+   # TYPESAFE_API_KEY=your_key
+   ```
 
-Restart the development server after editing `.dev.vars`. The app supports
-**Local controller** and **Live API** modes. It starts in Local controller mode,
-which uses built-in rule-based decisions and requires no credentials; use this
-mode to verify that the app works. For the actual flight experiment, select
-**Live API** to use Jev for System 1 and OpenRouter for optional System 2 advice.
-The flight environment remains simulated in both modes.
+3. Restart the development server and select **Live API**. The app starts in
+   **Local controller** mode, which uses built-in rule-based decisions and
+   requires no credentials; use it to verify that the app works. Live API uses
+   Jev for System 1 and OpenRouter for optional System 2 advice. The flight
+   environment remains simulated in both modes.
 
-Selecting Live API sets a 20% starting confidence gate but does not start the
-mission. Press **Launch mission** when you are ready. Adding credentials does
-not switch modes automatically. `.dev.vars` is ignored by Git.
+4. Press **Launch mission** when you are ready.
 
 The Jev adapter prefers `POST https://api.typesafe.ai/v1/systemone` with `jev-latest`. Without a direct TypeSafe key, it calls `POST https://openrouter.ai/api/alpha/decisions` with `typesafe/jev-1.13`. Both routes use the same typed choice over the available flight actions. The System 2 planner uses OpenRouter's chat completions API with strict structured output. Server errors, rate limits, and context-size failures can retry through the configured fallback model.
 
