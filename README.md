@@ -118,6 +118,18 @@ The scenario seed controls the obstacle layout, but live provider latency can st
 
 Exported telemetry includes the seed, fleet state, observations, probabilities, executed actions, confidence thresholds, provider timing, planner revisions, failures, and final outcomes.
 
+## Cost
+
+Simulation run cost depends on the fleet, scenario, mission duration, and selected
+models. In one successful 15-drone run, Jev made 201 decisions across roughly
+5.65 million tokens for about $0.24—approximately $0.0012 per decision.
+
+**Cost control.** Larger fleets generate more decisions. For inexpensive
+experiments, start with fewer drones and turn off System 2, since its language
+model calls cost more than Jev decisions. You can also set
+`OPENROUTER_MODEL=meta/muse-spark-1.3-contributor` for a lower-cost planner;
+availability and rate limits may be tighter than the default model.
+
 ## Project status
 
 This is an experimental autonomy visualization, not a production flight controller. The mock scenario and focused runtime checks cover the core simulation behavior. Live fleet success varies with model decisions, provider latency, seed, threshold, and fleet size.
