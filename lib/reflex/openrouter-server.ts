@@ -2,8 +2,7 @@ import type { PlanningContext, Strategy } from './types';
 import { validateStrategy } from './strategy-validation';
 import { compactPlanningContext } from './planning-context';
 export const DEFAULT_PLANNER_MODEL = 'z-ai/glm-5.3';
-export const DEFAULT_PLANNER_FALLBACK_MODEL =
-  'meta/muse-spark-1.3-contributor';
+export const DEFAULT_PLANNER_FALLBACK_MODEL = 'meta/muse-spark-1.3-contributor';
 // Official request contract: https://openrouter.ai/docs/api_reference/overview
 // and https://openrouter.ai/docs/guides/features/structured-outputs (2026-09-16).
 export function planningRequest(context: PlanningContext, model: string) {
@@ -120,7 +119,7 @@ export async function callPlanner(
 ): Promise<Strategy> {
   if (!key)
     throw new Error(
-      'OpenRouter unavailable: set OPENROUTER_API_KEY in the server environment. No mock fallback.',
+      'OpenRouter unavailable: connect an OpenRouter key in Provider settings. No mock fallback.',
     );
   if (!model || model.length > 150 || !/^[\w./:-]+$/.test(model))
     throw new Error('OpenRouter model configuration is invalid');

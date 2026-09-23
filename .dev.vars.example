@@ -2,5 +2,9 @@
 OPENROUTER_API_KEY=
 OPENROUTER_MODEL=z-ai/glm-5.3
 
+# Required to save personal provider keys in the encrypted HttpOnly cookie.
+# Generate with: openssl rand -base64 32
+CREDENTIALS_ENCRYPTION_KEY=
+
 # Optional: uncomment to prefer the direct TypeSafe route for System 1.
 # TYPESAFE_API_KEY=

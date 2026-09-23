@@ -1,12 +1,15 @@
-import { env } from 'cloudflare:workers';
 import {
   callPlanner,
   DEFAULT_PLANNER_MODEL,
 } from '@/lib/reflex/openrouter-server';
 import type { PlanningContext } from '@/lib/reflex/types';
+import {
+  credentialsForRequest,
+  readSavedCredentials,
+  sameOriginRequest,
+} from '@/lib/reflex/credential-cookie';
 export async function POST(request: Request) {
-  const origin = request.headers.get('origin');
-  if (origin && origin !== new URL(request.url).origin)
+  if (!sameOriginRequest(request))
     return Response.json(
       { error: 'Cross-origin requests are not supported' },
       { status: 403 },
@@ -44,16 +47,12 @@ export async function POST(request: Request) {
         { error: 'Invalid planning context' },
         { status: 400 },
       );
-    const settings = env as {
-      OPENROUTER_API_KEY?: string;
-      OPENROUTER_MODEL?: string;
-    };
+    const saved = await readSavedCredentials(request);
+    const { openRouterApiKey } = credentialsForRequest(saved);
     const strategy = await callPlanner(
       context,
-      settings.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY,
-      settings.OPENROUTER_MODEL ||
-        process.env.OPENROUTER_MODEL ||
-        DEFAULT_PLANNER_MODEL,
+      openRouterApiKey,
+      process.env.OPENROUTER_MODEL || DEFAULT_PLANNER_MODEL,
       AbortSignal.any([request.signal, AbortSignal.timeout(28000)]),
     );
     return Response.json(strategy, {

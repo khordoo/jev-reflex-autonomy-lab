@@ -202,7 +202,7 @@ export async function callJev(
 ) {
   if (!key)
     throw new Error(
-      'Jev unavailable: set TYPESAFE_API_KEY in the server environment. No mock fallback.',
+      'Jev unavailable: connect a TypeSafe or OpenRouter key in Provider settings. No mock fallback.',
     );
   return callJevEndpoint(
     context,
@@ -222,7 +222,7 @@ export async function callOpenRouterJev(
 ) {
   if (!key)
     throw new Error(
-      'Jev unavailable: set TYPESAFE_API_KEY or OPENROUTER_API_KEY in the server environment. No mock fallback.',
+      'Jev unavailable: connect a TypeSafe or OpenRouter key in Provider settings. No mock fallback.',
     );
   return callJevEndpoint(
     context,

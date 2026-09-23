@@ -62,6 +62,18 @@ npm run dev
 
 Open the printed local URL. The app starts with development mocks, so it works without provider credentials.
 
+## Deploy to Vercel
+
+Import the repository into Vercel and keep the project root at the repository root. Vercel uses the Nitro Vite adapter for the server-rendered app and API routes; the existing Cloudflare/Wrangler setup remains available for local development. The Vercel build uses `npm run build` and emits Vercel's Build Output API bundle.
+
+Add one server-only environment variable in Vercel's project settings:
+
+```text
+CREDENTIALS_ENCRYPTION_KEY=<a private random value of at least 32 characters>
+```
+
+Generate a value with `openssl rand -base64 32`. Do not prefix it with `NEXT_PUBLIC_` or `VITE_`. Visitors provide their own OpenRouter or TypeSafe keys in the Settings dialog; the deployment does not need provider keys. `ALLOW_SHARED_API_KEYS` stays unset so visitors cannot use deployment provider credits. Local `.dev.vars` files are ignored and are not part of the deployment.
+
 Useful checks:
 
 ```bash
@@ -87,6 +99,7 @@ npm run build
    ```dotenv
    OPENROUTER_API_KEY=your_key
    OPENROUTER_MODEL=z-ai/glm-5.3
+   CREDENTIALS_ENCRYPTION_KEY=generate-a-private-value-with-openssl-rand-base64-32
 
    # Optional: uncomment to prefer the direct TypeSafe route for System 1
    # TYPESAFE_API_KEY=your_key
@@ -101,6 +114,14 @@ npm run build
 4. Press **Launch mission** when you are ready.
 
 The Jev adapter prefers `POST https://api.typesafe.ai/v1/systemone` with `jev-latest`. Without a direct TypeSafe key, it calls `POST https://openrouter.ai/api/alpha/decisions` with `typesafe/jev-1.13`. Both routes use the same typed choice over the available flight actions. The System 2 planner uses OpenRouter's chat completions API with strict structured output. Server errors, rate limits, and context-size failures can retry through the configured fallback model.
+
+### Save credentials in this browser
+
+The Settings dialog can save personal OpenRouter and optional TypeSafe keys in an encrypted, `HttpOnly`, `Secure` (on HTTPS), `SameSite=Strict` cookie. The server decrypts the keys only when making provider requests. By default the cookie expires after one hour; **Remember for 7 days** extends it to seven days. Removing credentials from the dialog clears the cookie; revoke a key with its provider as well if you need to invalidate it.
+
+Set `CREDENTIALS_ENCRYPTION_KEY` to a private random value of at least 32 characters in the server environment. For local development, generate one with `openssl rand -base64 32` and put it in `.dev.vars`. On a production deployment, add it as a server-only secret. User-saved credentials work without a database.
+
+Server-configured provider keys remain available as a local development fallback. In production, they are disabled for visitors unless `ALLOW_SHARED_API_KEYS=true` is explicitly set. Enable that only when you intend visitors to use the deployment's shared provider account and credits.
 
 ## Experiment workflow
 

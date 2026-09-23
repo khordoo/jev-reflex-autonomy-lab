@@ -1,9 +1,12 @@
-import { env } from 'cloudflare:workers';
 import { callJev, callOpenRouterJev } from '@/lib/reflex/jev-server';
 import type { DecisionContext } from '@/lib/reflex/types';
+import {
+  credentialsForRequest,
+  readSavedCredentials,
+  sameOriginRequest,
+} from '@/lib/reflex/credential-cookie';
 export async function POST(request: Request) {
-  const origin = request.headers.get('origin');
-  if (origin && origin !== new URL(request.url).origin)
+  if (!sameOriginRequest(request))
     return Response.json(
       { error: 'Cross-origin requests are not supported' },
       { status: 403 },
@@ -28,12 +31,9 @@ export async function POST(request: Request) {
         { error: 'Invalid decision context' },
         { status: 400 },
       );
-    const typesafeKey =
-      (env as { TYPESAFE_API_KEY?: string }).TYPESAFE_API_KEY ||
-      process.env.TYPESAFE_API_KEY;
-    const openRouterKey =
-      (env as { OPENROUTER_API_KEY?: string }).OPENROUTER_API_KEY ||
-      process.env.OPENROUTER_API_KEY;
+    const saved = await readSavedCredentials(request);
+    const { typesafeApiKey: typesafeKey, openRouterApiKey: openRouterKey } =
+      credentialsForRequest(saved);
     const deadline = performance.now() + 5500;
     const attempt = () =>
       (typesafeKey ? callJev : callOpenRouterJev)(
