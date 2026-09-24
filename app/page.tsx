@@ -24,6 +24,7 @@ import {
   RotateCcw,
   Settings2,
   Trash2,
+  TriangleAlert,
   X,
   Zap,
 } from 'lucide-react';
@@ -852,6 +853,12 @@ export default function Home() {
                   ? 'Resume mission'
                   : 'Launch mission'}
             </button>
+            {mode === 'mock' && plannerMode === 'mock' && (
+              <span className="local-controller-warning">
+                <TriangleAlert size={14} aria-hidden="true" />
+                Local controller · no live API
+              </span>
+            )}
             <button
               className="icon-button"
               aria-label="Reset mission"

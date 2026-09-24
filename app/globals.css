@@ -424,6 +424,15 @@ button {
   border-radius: 5px;
   padding: 11px 15px;
 }
+.local-controller-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #efb97b;
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
 .icon-button {
   color: #9caeb8;
   background: transparent;
