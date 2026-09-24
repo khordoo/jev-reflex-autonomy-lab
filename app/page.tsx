@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -51,6 +51,21 @@ import type { World } from '@/lib/reflex/types';
 import { browserRegistry, registerMissionTools } from '@/lib/reflex/webmcp';
 
 const INITIAL_DESTINATION_DISTANCE = 1400;
+const WELCOME_DISMISSED_KEY = 'reflex-welcome-dismissed-v1';
+function subscribeToWelcomeDismissal(onChange: () => void) {
+  window.addEventListener('storage', onChange);
+  return () => window.removeEventListener('storage', onChange);
+}
+function welcomeWasDismissed() {
+  try {
+    return window.localStorage.getItem(WELCOME_DISMISSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function welcomeWasDismissedOnServer() {
+  return true;
+}
 type ProviderConfig = {
   jevConfigured: boolean;
   jevProvider: string;
@@ -204,6 +219,13 @@ export default function Home() {
     sharedKeysEnabled: false,
   });
   const [configError, setConfigError] = useState(false);
+  const [configReady, setConfigReady] = useState(false);
+  const [dismissedWelcomeInPage, setDismissedWelcomeInPage] = useState(false);
+  const dismissedWelcomeInBrowser = useSyncExternalStore(
+    subscribeToWelcomeDismissal,
+    welcomeWasDismissed,
+    welcomeWasDismissedOnServer,
+  );
   const [credentialsOpen, setCredentialsOpen] = useState(false);
   const [openRouterKey, setOpenRouterKey] = useState('');
   const [typesafeKey, setTypesafeKey] = useState('');
@@ -242,6 +264,19 @@ export default function Home() {
     if (!open) clearCredentialDraft();
     setCredentialsOpen(open);
   }
+  function openProviderSettings() {
+    setCredentialMessage('');
+    void checkProviders();
+    setCredentialDialogOpen(true);
+  }
+  function dismissWelcome() {
+    setDismissedWelcomeInPage(true);
+    try {
+      window.localStorage.setItem(WELCOME_DISMISSED_KEY, '1');
+    } catch {
+      // The banner still closes when browser storage is unavailable.
+    }
+  }
   async function checkProviders() {
     try {
       const response = await fetch('/api/providers');
@@ -251,6 +286,8 @@ export default function Home() {
       setConfigError(false);
     } catch {
       setConfigError(true);
+    } finally {
+      setConfigReady(true);
     }
   }
   useEffect(() => {
@@ -655,6 +692,13 @@ export default function Home() {
         (1 - distanceToDestination / INITIAL_DESTINATION_DISTANCE) * 100,
       ),
     );
+  const showGettingStarted =
+    !dismissedWelcomeInPage &&
+    !dismissedWelcomeInBrowser &&
+    configReady &&
+    !configError &&
+    providerConfig.credentialStorageEnabled &&
+    !providerConfig.jevConfigured;
   return (
     <main>
       <header className="topbar">
@@ -677,12 +721,8 @@ export default function Home() {
                 : 'LIVE · shared provider key'}
           </span>
           <button
-            className="settings-button"
-            onClick={() => {
-              setCredentialMessage('');
-              void checkProviders();
-              setCredentialDialogOpen(true);
-            }}
+            className={`settings-button${showGettingStarted ? ' is-guided' : ''}`}
+            onClick={openProviderSettings}
           >
             <Settings2 size={15} /> Settings
           </button>
@@ -692,6 +732,32 @@ export default function Home() {
           <span className="version">PHASE 01</span>
         </div>
       </header>
+      {showGettingStarted && (
+        <aside className="welcome-strip" aria-label="Getting started">
+          <Cloud size={18} aria-hidden="true" />
+          <p>
+            <strong>Want to try live calls?</strong> Local controller works now
+            without a key. For live mode, add a provider key in Settings, select
+            Live API, then Launch mission.
+          </p>
+          <button
+            type="button"
+            className="welcome-setup-button"
+            onClick={openProviderSettings}
+          >
+            Set up live calls
+          </button>
+          <button
+            type="button"
+            className="welcome-dismiss-button"
+            onClick={dismissWelcome}
+            aria-label="Dismiss getting started tip"
+            title="Dismiss"
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
+        </aside>
+      )}
       <Dialog open={credentialsOpen} onOpenChange={setCredentialDialogOpen}>
         <DialogContent className="credentials-dialog">
           <DialogHeader>

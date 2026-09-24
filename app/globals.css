@@ -1176,6 +1176,74 @@ footer a,
 .save-credentials-button:hover {
   border-color: #6e9154;
 }
+.settings-button.is-guided {
+  border-color: #729754;
+  color: #d8f8bf;
+}
+.welcome-strip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  border: 1px solid #436545;
+  border-radius: 7px;
+  background: #17231d;
+  color: #c6d7c9;
+}
+.welcome-strip > svg {
+  color: #b7f580;
+}
+.welcome-strip p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.welcome-strip strong {
+  color: #e4f3dd;
+}
+.welcome-setup-button {
+  border: 1px solid #6e9154;
+  border-radius: 5px;
+  background: #314b31;
+  color: #e4f6d8;
+  padding: 7px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.welcome-setup-button:hover {
+  background: #3a5b38;
+}
+.welcome-dismiss-button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: #a3b7a7;
+}
+.welcome-dismiss-button:hover {
+  color: #e4f3dd;
+}
+@media (max-width: 640px) {
+  .welcome-strip {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+  }
+  .welcome-strip p {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .welcome-setup-button {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
+  }
+  .welcome-dismiss-button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
 .credentials-dialog {
   display: flex;
   flex-direction: column;
