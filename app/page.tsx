@@ -46,7 +46,12 @@ import {
   MockStrategyProvider,
   OpenRouterStrategyProvider,
 } from '@/lib/reflex/providers';
-import { createWorld, MAX_DRONES, stepWorld } from '@/lib/reflex/world';
+import {
+  createWorld,
+  DEFAULT_SEED,
+  MAX_DRONES,
+  stepWorld,
+} from '@/lib/reflex/world';
 import type { World } from '@/lib/reflex/types';
 import { browserRegistry, registerMissionTools } from '@/lib/reflex/webmcp';
 
@@ -195,7 +200,9 @@ export default function Home() {
   const [droneCount, setDroneCount] = useState(3);
   const [system2Enabled, setSystem2Enabled] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState('D_01');
-  const [world, setWorld] = useState(() => createWorld('seeded', 42, 3, false));
+  const [world, setWorld] = useState(() =>
+    createWorld('seeded', DEFAULT_SEED, 3, false),
+  );
   const [controller, setController] = useState(
     () =>
       new Controller(new MockDecisionProvider(), new MockStrategyProvider()),
@@ -207,7 +214,7 @@ export default function Home() {
     [threshold, setThreshold] = useState(20),
     [mode, setMode] = useState('mock'),
     [plannerMode, setPlannerMode] = useState('mock'),
-    [seed, setSeed] = useState(42);
+    [seed, setSeed] = useState(DEFAULT_SEED);
   const [providerConfig, setProviderConfig] = useState<ProviderConfig>({
     jevConfigured: false,
     jevProvider: 'none',

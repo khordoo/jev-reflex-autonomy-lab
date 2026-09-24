@@ -83,9 +83,10 @@ export function seeded(seed: number) {
     return n / 4294967296;
   };
 }
+export const DEFAULT_SEED = 987867;
 export function createWorld(
   scenario: World['scenario'] = 'hero',
-  seed = 42,
+  seed = DEFAULT_SEED,
   droneCount = 1,
   includeUnknown = true,
 ): World {
