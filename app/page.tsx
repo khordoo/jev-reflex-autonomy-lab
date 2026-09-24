@@ -827,7 +827,9 @@ export default function Home() {
               <p>
                 The server encrypts your keys into a cookie stored in this
                 browser. This app has no key database. The server decrypts them
-                to make your requests to OpenRouter or TypeSafe.
+                to make your requests to OpenRouter or TypeSafe. You can remove
+                the keys saved in this browser at any time using “Remove all
+                saved keys” below.
               </p>
             </div>
           </div>
@@ -1024,9 +1026,9 @@ export default function Home() {
             <small>New saves expire after 1 hour unless selected.</small>
           </div>
           <p className="credential-revoke-note">
-            Removing a key here clears this browser’s saved copy. To invalidate
-            the provider key itself, revoke it in your OpenRouter or TypeSafe
-            account. See our{' '}
+            Removing saved keys here does not revoke them with OpenRouter or
+            TypeSafe. To invalidate a key, revoke it in your provider account.
+            See our{' '}
             <a href="/privacy" target="_blank" rel="noopener noreferrer">
               Privacy Notice
             </a>{' '}
