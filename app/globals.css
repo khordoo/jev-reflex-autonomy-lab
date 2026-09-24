@@ -1166,19 +1166,91 @@ footer {
   padding: 10px;
 }
 .credential-field {
+  position: relative;
   display: grid;
   gap: 7px;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
 }
-.credential-field > label:first-child {
+.credential-field-label {
+  display: block;
+  max-width: calc(100% - 62px);
+  margin: 0 0 1px;
+  padding: 0;
   color: #d7e0e5;
   font-size: 13px;
 }
-.credential-field > label:first-child span {
+.credential-field-label span {
   color: #8197a5;
   font-size: 11px;
 }
+.saved-key-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  border: 1px solid #42613f;
+  border-radius: 999px;
+  background: #18281a;
+  color: #b7f580;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.saved-key-row,
+.credential-edit-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.saved-key-mask {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #344754;
+  border-radius: 5px;
+  background: #0b1219;
+  color: #b9c9d1;
+  padding: 10px 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+.saved-key-actions {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+.credential-icon-button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  place-items: center;
+  border: 1px solid #344754;
+  border-radius: 5px;
+  background: #17232d;
+  color: #c0cdd4;
+  padding: 0;
+}
+.credential-icon-button:hover:not(:disabled) {
+  border-color: #83ad62;
+  color: #dff4ca;
+}
+.credential-remove-icon {
+  color: #d49d91;
+}
+.credential-remove-icon:hover:not(:disabled) {
+  border-color: #895c55;
+  color: #f0b3a7;
+}
 .credential-field input[type='password'] {
-  width: 100%;
+  flex: 1;
+  width: 0;
+  min-width: 0;
   padding: 10px 11px;
   border-color: #344754;
   background: #0b1219;
@@ -1189,7 +1261,37 @@ footer {
   color: #8195a2;
   font-size: 11px;
 }
-.credential-remove-row,
+.credential-edit-cancel {
+  color: #9eafb9;
+}
+.credential-pending-remove {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 36px;
+  border: 1px solid #6c523a;
+  border-radius: 5px;
+  background: #241e17;
+  color: #efc17f;
+  padding: 6px 9px;
+  font-size: 11px;
+}
+.credential-pending-remove button {
+  flex: none;
+  color: #e7c591;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.credential-lifetime {
+  display: grid;
+  gap: 4px;
+}
+.credential-lifetime > small {
+  margin-left: 22px;
+  color: #8195a2;
+  font-size: 11px;
+}
 .credential-remember {
   display: flex;
   align-items: center;
@@ -1197,7 +1299,6 @@ footer {
   color: #99aab5;
   font-size: 11px;
 }
-.credential-remove-row input[type='checkbox'],
 .credential-remember input[type='checkbox'] {
   width: 14px;
   height: 14px;

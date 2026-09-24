@@ -16,11 +16,14 @@ import {
   Download,
   Orbit,
   Pause,
+  Pencil,
   Play,
   Radar,
   Route,
   RotateCcw,
   Settings2,
+  Trash2,
+  X,
   Zap,
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
@@ -55,6 +58,123 @@ type ProviderConfig = {
   sharedKeysEnabled: boolean;
 };
 
+type CredentialFieldProps = {
+  id: string;
+  label: string;
+  optional?: boolean;
+  hint: string;
+  saved: boolean;
+  editing: boolean;
+  value: string;
+  pendingRemoval: boolean;
+  disabled: boolean;
+  onValueChange: (value: string) => void;
+  onEdit: () => void;
+  onCancelEdit: () => void;
+  onRequestRemoval: () => void;
+  onUndoRemoval: () => void;
+};
+
+function CredentialField({
+  id,
+  label,
+  optional = false,
+  hint,
+  saved,
+  editing,
+  value,
+  pendingRemoval,
+  disabled,
+  onValueChange,
+  onEdit,
+  onCancelEdit,
+  onRequestRemoval,
+  onUndoRemoval,
+}: CredentialFieldProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (saved && editing && !pendingRemoval) inputRef.current?.focus();
+  }, [saved, editing, pendingRemoval]);
+
+  return (
+    <fieldset className="credential-field">
+      <legend className="credential-field-label" id={`${id}-field-label`}>
+        {label} {optional && <span>optional</span>}
+      </legend>
+      {saved && !pendingRemoval && (
+        <span className="saved-key-badge">Saved</span>
+      )}
+      {pendingRemoval ? (
+        <output className="credential-pending-remove">
+          <span>Will be removed when you save.</span>
+          <button type="button" onClick={onUndoRemoval} disabled={disabled}>
+            Undo
+          </button>
+        </output>
+      ) : saved && !editing ? (
+        <div className="saved-key-row">
+          <span
+            className="saved-key-mask"
+            aria-label={`${label} saved; value hidden`}
+          >
+            ••••••••••••
+          </span>
+          <div className="saved-key-actions">
+            <button
+              type="button"
+              className="credential-icon-button"
+              onClick={onEdit}
+              disabled={disabled}
+              aria-label={`Replace ${label}`}
+              title={`Replace ${label}`}
+            >
+              <Pencil size={14} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="credential-icon-button credential-remove-icon"
+              onClick={onRequestRemoval}
+              disabled={disabled}
+              aria-label={`Remove ${label}`}
+              title={`Remove ${label}`}
+            >
+              <Trash2 size={14} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="credential-edit-control">
+          <input
+            ref={inputRef}
+            id={id}
+            type="password"
+            autoComplete="new-password"
+            aria-labelledby={`${id}-field-label`}
+            spellCheck={false}
+            value={value}
+            placeholder={saved ? 'Paste replacement key' : 'Paste your key'}
+            onChange={(event) => onValueChange(event.target.value)}
+            disabled={disabled}
+          />
+          {saved && editing && (
+            <button
+              type="button"
+              className="credential-icon-button credential-edit-cancel"
+              onClick={onCancelEdit}
+              disabled={disabled}
+              aria-label={`Cancel replacing ${label}`}
+              title="Cancel"
+            >
+              <X size={15} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      )}
+      <small>{hint}</small>
+    </fieldset>
+  );
+}
+
 export default function Home() {
   const [droneCount, setDroneCount] = useState(3);
   const [system2Enabled, setSystem2Enabled] = useState(false);
@@ -85,12 +205,28 @@ export default function Home() {
   const [credentialsOpen, setCredentialsOpen] = useState(false);
   const [openRouterKey, setOpenRouterKey] = useState('');
   const [typesafeKey, setTypesafeKey] = useState('');
+  const [editingOpenRouter, setEditingOpenRouter] = useState(false);
+  const [editingTypeSafe, setEditingTypeSafe] = useState(false);
   const [rememberCredentials, setRememberCredentials] = useState(false);
   const [removeOpenRouter, setRemoveOpenRouter] = useState(false);
   const [removeTypeSafe, setRemoveTypeSafe] = useState(false);
   const [credentialBusy, setCredentialBusy] = useState(false);
   const [credentialMessage, setCredentialMessage] = useState('');
   const [chartTime, setChartTime] = useState(0);
+  function clearCredentialDraft() {
+    setOpenRouterKey('');
+    setTypesafeKey('');
+    setEditingOpenRouter(false);
+    setEditingTypeSafe(false);
+    setRemoveOpenRouter(false);
+    setRemoveTypeSafe(false);
+    setRememberCredentials(false);
+    setCredentialMessage('');
+  }
+  function setCredentialDialogOpen(open: boolean) {
+    if (!open) clearCredentialDraft();
+    setCredentialsOpen(open);
+  }
   async function checkProviders() {
     try {
       const response = await fetch('/api/providers');
@@ -109,6 +245,16 @@ export default function Home() {
     setCredentialBusy(true);
     setCredentialMessage('');
     try {
+      const remainingOpenRouter =
+        Boolean(openRouterKey.trim()) ||
+        (providerConfig.savedCredentials.openRouter && !removeOpenRouter);
+      const remainingTypeSafe =
+        Boolean(typesafeKey.trim()) ||
+        (providerConfig.savedCredentials.typeSafe && !removeTypeSafe);
+      const removesLastKey =
+        (removeOpenRouter || removeTypeSafe) &&
+        !remainingOpenRouter &&
+        !remainingTypeSafe;
       const body: Record<string, unknown> = {
         rememberForSevenDays: rememberCredentials,
       };
@@ -116,26 +262,35 @@ export default function Home() {
       if (typesafeKey.trim()) body.typesafeApiKey = typesafeKey.trim();
       if (removeOpenRouter) body.removeOpenRouter = true;
       if (removeTypeSafe) body.removeTypeSafe = true;
-      const response = await fetch('/api/providers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const response = removesLastKey
+        ? await fetch('/api/providers', { method: 'DELETE' })
+        : await fetch('/api/providers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
       const result = (await response.json()) as
         | ProviderConfig
-        | { error?: string };
+        | { error?: string; removed?: boolean };
       if (!response.ok)
         throw new Error(
           'error' in result ? result.error : 'Could not save credentials.',
         );
-      setProviderConfig(result as ProviderConfig);
+      if (removesLastKey) await checkProviders();
+      else setProviderConfig(result as ProviderConfig);
       setOpenRouterKey('');
       setTypesafeKey('');
+      setEditingOpenRouter(false);
+      setEditingTypeSafe(false);
       setRemoveOpenRouter(false);
       setRemoveTypeSafe(false);
-      setCredentialMessage('Saved securely in this browser.');
+      setCredentialMessage(
+        removesLastKey
+          ? 'Saved credentials removed from this browser.'
+          : `Provider keys saved for ${rememberCredentials ? '7 days' : '1 hour'} in this browser.`,
+      );
       setConfigError(false);
-      if (removeOpenRouter || removeTypeSafe) {
+      if (removeOpenRouter || removeTypeSafe || removesLastKey) {
         setMode('mock');
         setPlannerMode('mock');
         reset(world.scenario, 'mock', 'mock');
@@ -161,6 +316,8 @@ export default function Home() {
       await checkProviders();
       setOpenRouterKey('');
       setTypesafeKey('');
+      setEditingOpenRouter(false);
+      setEditingTypeSafe(false);
       setRemoveOpenRouter(false);
       setRemoveTypeSafe(false);
       setCredentialMessage('Saved credentials removed from this browser.');
@@ -395,7 +552,7 @@ export default function Home() {
             onClick={() => {
               setCredentialMessage('');
               void checkProviders();
-              setCredentialsOpen(true);
+              setCredentialDialogOpen(true);
             }}
           >
             <Settings2 size={15} /> Settings
@@ -406,19 +563,18 @@ export default function Home() {
           <span className="version">PHASE 01</span>
         </div>
       </header>
-      <Dialog open={credentialsOpen} onOpenChange={setCredentialsOpen}>
+      <Dialog open={credentialsOpen} onOpenChange={setCredentialDialogOpen}>
         <DialogContent className="credentials-dialog">
           <DialogHeader>
             <DialogTitle>Provider settings</DialogTitle>
             <DialogDescription>
-              The local controller is free to run. Add your own keys only when
-              you want to make live provider calls.
+              Local mode needs no credentials. Live calls use your provider
+              account.
             </DialogDescription>
           </DialogHeader>
           <p className="credential-notice">
-            Keys are encrypted by this server and saved in an HttpOnly browser
-            cookie. Live requests use your provider credits. The default expiry
-            is one hour; choose seven days only on a browser you trust.
+            Keys are encrypted by the server and saved in this browser’s
+            HttpOnly cookie. Only your provider can revoke the keys themselves.
           </p>
           {!providerConfig.credentialStorageEnabled && (
             <p className="credential-warning" role="alert">
@@ -426,91 +582,67 @@ export default function Home() {
               keys cannot be saved yet.
             </p>
           )}
-          <div className="credential-field">
-            <label htmlFor="openrouter-key">OpenRouter API key</label>
-            <input
-              id="openrouter-key"
-              type="password"
-              autoComplete="new-password"
-              spellCheck={false}
-              value={openRouterKey}
-              placeholder={
-                providerConfig.savedCredentials.openRouter
-                  ? 'Saved · leave blank to keep'
-                  : 'Paste your key'
-              }
-              onChange={(event) => {
-                setOpenRouterKey(event.target.value);
-                if (event.target.value) setRemoveOpenRouter(false);
-              }}
-              disabled={
-                !providerConfig.credentialStorageEnabled || credentialBusy
-              }
-            />
-            <small>
-              System 1 through OpenRouter and optional System 2 advice.
-            </small>
-            {providerConfig.savedCredentials.openRouter && (
-              <label className="credential-remove-row">
-                <input
-                  type="checkbox"
-                  checked={removeOpenRouter}
-                  onChange={(event) =>
-                    setRemoveOpenRouter(event.target.checked)
-                  }
-                  disabled={credentialBusy}
-                />
-                Remove saved OpenRouter key
-              </label>
-            )}
-          </div>
-          <div className="credential-field">
-            <label htmlFor="typesafe-key">
-              TypeSafe API key <span>optional</span>
+          <CredentialField
+            id="openrouter-key"
+            label="OpenRouter API key"
+            hint="System 1 through OpenRouter and optional System 2 advice."
+            saved={providerConfig.savedCredentials.openRouter}
+            editing={editingOpenRouter}
+            value={openRouterKey}
+            pendingRemoval={removeOpenRouter}
+            disabled={!providerConfig.credentialStorageEnabled || credentialBusy}
+            onValueChange={setOpenRouterKey}
+            onEdit={() => setEditingOpenRouter(true)}
+            onCancelEdit={() => {
+              setOpenRouterKey('');
+              setEditingOpenRouter(false);
+            }}
+            onRequestRemoval={() => {
+              setOpenRouterKey('');
+              setEditingOpenRouter(false);
+              setRemoveOpenRouter(true);
+            }}
+            onUndoRemoval={() => setRemoveOpenRouter(false)}
+          />
+          <CredentialField
+            id="typesafe-key"
+            label="TypeSafe API key"
+            optional
+            hint="Used directly for System 1 when present."
+            saved={providerConfig.savedCredentials.typeSafe}
+            editing={editingTypeSafe}
+            value={typesafeKey}
+            pendingRemoval={removeTypeSafe}
+            disabled={!providerConfig.credentialStorageEnabled || credentialBusy}
+            onValueChange={setTypesafeKey}
+            onEdit={() => setEditingTypeSafe(true)}
+            onCancelEdit={() => {
+              setTypesafeKey('');
+              setEditingTypeSafe(false);
+            }}
+            onRequestRemoval={() => {
+              setTypesafeKey('');
+              setEditingTypeSafe(false);
+              setRemoveTypeSafe(true);
+            }}
+            onUndoRemoval={() => setRemoveTypeSafe(false)}
+          />
+          <div className="credential-lifetime">
+            <label className="credential-remember">
+              <input
+                type="checkbox"
+                checked={rememberCredentials}
+                onChange={(event) =>
+                  setRememberCredentials(event.target.checked)
+                }
+                disabled={
+                  !providerConfig.credentialStorageEnabled || credentialBusy
+                }
+              />
+              Keep keys for 7 days when saving
             </label>
-            <input
-              id="typesafe-key"
-              type="password"
-              autoComplete="new-password"
-              spellCheck={false}
-              value={typesafeKey}
-              placeholder={
-                providerConfig.savedCredentials.typeSafe
-                  ? 'Saved · leave blank to keep'
-                  : 'Paste your key'
-              }
-              onChange={(event) => {
-                setTypesafeKey(event.target.value);
-                if (event.target.value) setRemoveTypeSafe(false);
-              }}
-              disabled={
-                !providerConfig.credentialStorageEnabled || credentialBusy
-              }
-            />
-            <small>Used directly for System 1 when present.</small>
-            {providerConfig.savedCredentials.typeSafe && (
-              <label className="credential-remove-row">
-                <input
-                  type="checkbox"
-                  checked={removeTypeSafe}
-                  onChange={(event) => setRemoveTypeSafe(event.target.checked)}
-                  disabled={credentialBusy}
-                />
-                Remove saved TypeSafe key
-              </label>
-            )}
+            <small>New saves expire after 1 hour unless selected.</small>
           </div>
-          <label className="credential-remember">
-            <input
-              type="checkbox"
-              checked={rememberCredentials}
-              onChange={(event) => setRememberCredentials(event.target.checked)}
-              disabled={
-                !providerConfig.credentialStorageEnabled || credentialBusy
-              }
-            />
-            Remember on this browser for 7 days
-          </label>
           <p className="credential-revoke-note">
             Removing a key here clears this browser’s saved copy. To invalidate
             the provider key itself, revoke it in your OpenRouter or TypeSafe
@@ -543,7 +675,11 @@ export default function Home() {
                   !removeTypeSafe)
               }
             >
-              {credentialBusy ? 'Saving…' : 'Save credentials'}
+              {credentialBusy
+                ? 'Saving…'
+                : removeOpenRouter || removeTypeSafe
+                  ? 'Save changes'
+                  : 'Save credentials'}
             </button>
           </DialogFooter>
         </DialogContent>
