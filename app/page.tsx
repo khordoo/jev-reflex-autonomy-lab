@@ -22,6 +22,7 @@ import {
   Radar,
   Route,
   RotateCcw,
+  Save,
   Settings2,
   Trash2,
   TriangleAlert,
@@ -206,7 +207,9 @@ export default function Home() {
   const [credentialsOpen, setCredentialsOpen] = useState(false);
   const [openRouterKey, setOpenRouterKey] = useState('');
   const [typesafeKey, setTypesafeKey] = useState('');
-  const [plannerModelDraft, setPlannerModelDraft] = useState<string | null>(null);
+  const [plannerModelDraft, setPlannerModelDraft] = useState<string | null>(
+    null,
+  );
   const [editingPlannerModel, setEditingPlannerModel] = useState(false);
   const [editingOpenRouter, setEditingOpenRouter] = useState(false);
   const [editingTypeSafe, setEditingTypeSafe] = useState(false);
@@ -249,6 +252,16 @@ export default function Home() {
     void checkProviders();
   }, []);
   async function saveCredentials() {
+    if (
+      editingPlannerModel &&
+      plannerModelDraft !== null &&
+      !plannerModelDraft.trim()
+    ) {
+      setCredentialMessage(
+        'Enter a model name, or use the reset icon to restore the default.',
+      );
+      return;
+    }
     setCredentialBusy(true);
     setCredentialMessage('');
     try {
@@ -322,6 +335,80 @@ export default function Home() {
     } catch (error) {
       setCredentialMessage(
         error instanceof Error ? error.message : 'Could not save credentials.',
+      );
+    } finally {
+      setCredentialBusy(false);
+    }
+  }
+  async function savePlannerModel(model: string) {
+    const nextModel = model.trim();
+    const needsOpenRouterKey = !providerConfig.savedCredentials.openRouter;
+    if (!nextModel) {
+      setCredentialMessage(
+        'Enter a model name, or use the reset icon to restore the default.',
+      );
+      return;
+    }
+    if (nextModel === providerConfig.plannerModel) {
+      setEditingPlannerModel(false);
+      setPlannerModelDraft(null);
+      return;
+    }
+    if (needsOpenRouterKey && !openRouterKey.trim()) {
+      setCredentialMessage(
+        'Add an OpenRouter API key before saving a custom model.',
+      );
+      return;
+    }
+    if (needsOpenRouterKey && !agreedToTerms) {
+      setCredentialMessage(
+        'Agree to the Terms of Use before saving your OpenRouter key.',
+      );
+      return;
+    }
+    setCredentialBusy(true);
+    setCredentialMessage('');
+    try {
+      const body: Record<string, unknown> = {
+        openRouterModel:
+          nextModel === providerConfig.defaultPlannerModel ? null : nextModel,
+        rememberForSevenDays: rememberCredentials,
+      };
+      if (needsOpenRouterKey) {
+        body.openRouterApiKey = openRouterKey.trim();
+        body.acceptedTerms = true;
+      }
+      const response = await fetch('/api/providers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const result = (await response.json()) as
+        | ProviderConfig
+        | { error?: string };
+      if (!response.ok)
+        throw new Error(
+          'error' in result ? result.error : 'Could not save model.',
+        );
+      const updatedConfig = result as ProviderConfig;
+      setProviderConfig(updatedConfig);
+      controller.setPlannerName(updatedConfig.plannerModel);
+      setPlannerModelDraft(null);
+      setEditingPlannerModel(false);
+      if (needsOpenRouterKey) {
+        setOpenRouterKey('');
+        setEditingOpenRouter(false);
+        setAgreedToTerms(false);
+      }
+      setCredentialMessage(
+        nextModel === providerConfig.defaultPlannerModel
+          ? 'Default model restored.'
+          : 'Model saved in this browser.',
+      );
+      setConfigError(false);
+    } catch (error) {
+      setCredentialMessage(
+        error instanceof Error ? error.message : 'Could not save model.',
       );
     } finally {
       setCredentialBusy(false);
@@ -623,7 +710,9 @@ export default function Home() {
             editing={editingOpenRouter}
             value={openRouterKey}
             pendingRemoval={removeOpenRouter}
-            disabled={!providerConfig.credentialStorageEnabled || credentialBusy}
+            disabled={
+              !providerConfig.credentialStorageEnabled || credentialBusy
+            }
             onValueChange={setOpenRouterKey}
             onEdit={() => setEditingOpenRouter(true)}
             onCancelEdit={() => {
@@ -670,10 +759,9 @@ export default function Home() {
                 <button
                   type="button"
                   className="credential-icon-button"
-                  onClick={() => {
-                    setEditingPlannerModel(true);
-                    setPlannerModelDraft(providerConfig.defaultPlannerModel);
-                  }}
+                  onClick={() =>
+                    void savePlannerModel(providerConfig.defaultPlannerModel)
+                  }
                   disabled={
                     !providerConfig.credentialStorageEnabled ||
                     credentialBusy ||
@@ -682,7 +770,7 @@ export default function Home() {
                       providerConfig.defaultPlannerModel
                   }
                   aria-label="Reset OpenRouter System 2 model to default"
-                  title="Reset to default"
+                  title="Restore default model"
                 >
                   <RotateCcw size={14} aria-hidden="true" />
                 </button>
@@ -707,6 +795,25 @@ export default function Home() {
                 <button
                   type="button"
                   className="credential-icon-button"
+                  onClick={() =>
+                    void savePlannerModel(
+                      plannerModelDraft ?? providerConfig.plannerModel,
+                    )
+                  }
+                  disabled={
+                    !providerConfig.credentialStorageEnabled ||
+                    credentialBusy ||
+                    removeOpenRouter ||
+                    !plannerModelDraft?.trim()
+                  }
+                  aria-label="Save OpenRouter System 2 model"
+                  title="Save model"
+                >
+                  <Save size={15} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className="credential-icon-button"
                   onClick={() => {
                     setEditingPlannerModel(false);
                     setPlannerModelDraft(null);
@@ -721,8 +828,8 @@ export default function Home() {
             )}
             <small>
               Used only when System 2 is on. A custom model needs an OpenRouter
-              key and structured output support; costs vary. Clear the field
-              and save to restore the default.
+              key and structured output support; costs vary. Click the circular
+              arrow to restore the default model.
             </small>
           </div>
           <CredentialField
@@ -734,7 +841,9 @@ export default function Home() {
             editing={editingTypeSafe}
             value={typesafeKey}
             pendingRemoval={removeTypeSafe}
-            disabled={!providerConfig.credentialStorageEnabled || credentialBusy}
+            disabled={
+              !providerConfig.credentialStorageEnabled || credentialBusy
+            }
             onValueChange={setTypesafeKey}
             onEdit={() => setEditingTypeSafe(true)}
             onCancelEdit={() => {
@@ -774,7 +883,8 @@ export default function Home() {
             and{' '}
             <a href="/terms" target="_blank" rel="noopener noreferrer">
               Terms of Use
-            </a>.
+            </a>
+            .
           </p>
           {(openRouterKey.trim() || typesafeKey.trim()) && (
             <label className="credential-agreement">
@@ -785,8 +895,15 @@ export default function Home() {
                 disabled={credentialBusy}
               />
               <span>
-                I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer">Terms of Use</a> and
-                acknowledge the <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Notice</a>.
+                I agree to the{' '}
+                <a href="/terms" target="_blank" rel="noopener noreferrer">
+                  Terms of Use
+                </a>{' '}
+                and acknowledge the{' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer">
+                  Privacy Notice
+                </a>
+                .
               </span>
             </label>
           )}
@@ -811,7 +928,8 @@ export default function Home() {
               disabled={
                 !providerConfig.credentialStorageEnabled ||
                 credentialBusy ||
-                ((Boolean(openRouterKey.trim()) || Boolean(typesafeKey.trim())) &&
+                ((Boolean(openRouterKey.trim()) ||
+                  Boolean(typesafeKey.trim())) &&
                   !agreedToTerms) ||
                 (!openRouterKey.trim() &&
                   !typesafeKey.trim() &&
@@ -1360,8 +1478,11 @@ export default function Home() {
             Local controller: runs the built-in rule-based reflexes with no
             credentials. Live API: live TypeSafe Jev via{' '}
             {providerConfig.jevProvider}
-            {system2Enabled ? ` + ${providerConfig.plannerModel}` : ' only'} over the network. The
-            flight environment stays simulated in both modes.
+            {system2Enabled
+              ? ` + ${providerConfig.plannerModel}`
+              : ' only'}{' '}
+            over the network. The flight environment stays simulated in both
+            modes.
             {mode === 'jev'
               ? ' Live mode sets a 20% starting gate; the gate remains adjustable.'
               : ''}
