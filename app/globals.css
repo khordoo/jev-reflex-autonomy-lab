@@ -1382,6 +1382,9 @@ footer a,
   color: #e8eef0;
   font-size: 13px;
 }
+.credential-field input[type='password']:focus-visible {
+  outline-offset: -2px;
+}
 .credential-field small {
   color: #8195a2;
   font-size: 11px;
