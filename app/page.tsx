@@ -164,7 +164,7 @@ function CredentialField({
             ref={inputRef}
             id={id}
             type="password"
-            autoComplete="new-password"
+            autoComplete="off"
             aria-labelledby={`${id}-field-label`}
             spellCheck={false}
             value={value}
