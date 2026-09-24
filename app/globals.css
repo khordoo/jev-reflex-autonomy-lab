@@ -1250,12 +1250,12 @@ footer a,
   gap: 14px;
   width: min(480px, calc(100vw - 28px));
   max-width: min(480px, calc(100vw - 28px));
-  max-height: min(90vh, 760px);
+  max-height: calc(100dvh - 24px);
   overflow-y: auto;
   border: 1px solid #344653;
   background: #101922;
   color: #e8eef0;
-  padding: 24px;
+  padding: 24px 24px 0;
   box-shadow: 0 24px 90px #000b;
 }
 .credentials-dialog [data-slot='dialog-title'] {
@@ -1526,7 +1526,10 @@ footer a,
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  margin: 0 -24px -24px;
+  position: sticky;
+  bottom: 0;
+  flex-shrink: 0;
+  margin: 0 -24px;
   padding: 14px 24px;
   border-color: #2b3d49;
   background: #0d151d;
