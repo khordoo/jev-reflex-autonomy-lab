@@ -1291,8 +1291,12 @@ export default function Home() {
       <footer>
         <span>REFLEX LAB / MULTI-DRONE EXPERIMENT</span>
         <nav aria-label="Site policies">
-          <a href="/privacy">Privacy</a>
-          <a href="/terms">Terms</a>
+          <a href="/privacy" target="_blank" rel="noopener noreferrer">
+            Privacy
+          </a>
+          <a href="/terms" target="_blank" rel="noopener noreferrer">
+            Terms
+          </a>
         </nav>
       </footer>
     </main>
