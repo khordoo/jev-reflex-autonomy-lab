@@ -1,5 +1,4 @@
 'use client';
-import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import {
   Dialog,
@@ -656,8 +655,8 @@ export default function Home() {
           <p className="credential-revoke-note">
             Removing a key here clears this browser’s saved copy. To invalidate
             the provider key itself, revoke it in your OpenRouter or TypeSafe
-            account. See our <Link href="/privacy">Privacy Notice</Link> and{' '}
-            <Link href="/terms">Terms of Use</Link>.
+            account. See our <a href="/privacy">Privacy Notice</a> and{' '}
+            <a href="/terms">Terms of Use</a>.
           </p>
           {(openRouterKey.trim() || typesafeKey.trim()) && (
             <label className="credential-agreement">
@@ -668,8 +667,8 @@ export default function Home() {
                 disabled={credentialBusy}
               />
               <span>
-                I agree to the <Link href="/terms" target="_blank" rel="noopener noreferrer">Terms of Use</Link> and
-                acknowledge the <Link href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Notice</Link>.
+                I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer">Terms of Use</a> and
+                acknowledge the <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Notice</a>.
               </span>
             </label>
           )}
@@ -1286,8 +1285,8 @@ export default function Home() {
       <footer>
         <span>REFLEX LAB / MULTI-DRONE EXPERIMENT</span>
         <nav aria-label="Site policies">
-          <Link href="/privacy">Privacy</Link>
-          <Link href="/terms">Terms</Link>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
         </nav>
       </footer>
     </main>

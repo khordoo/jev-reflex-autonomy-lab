@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Privacy Notice — Jev Reflex Autonomy Lab',
@@ -9,7 +8,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <main className="policy-page">
-      <Link className="policy-back" href="/">← Back to the lab</Link>
+      <a className="policy-back" href="/">← Back to the lab</a>
       <article>
         <h1>Privacy Notice</h1>
         <p className="policy-updated">Last updated September 23, 2026</p>
@@ -64,7 +63,7 @@ export default function PrivacyPage() {
           <a href="mailto:m.khordoo@gmail.com">m.khordoo@gmail.com</a>.
         </p>
         <p>
-          Also see the <Link href="/terms">Terms of Use</Link>.
+          Also see the <a href="/terms">Terms of Use</a>.
         </p>
       </article>
     </main>

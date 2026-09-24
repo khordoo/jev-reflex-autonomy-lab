@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Terms of Use — Jev Reflex Autonomy Lab',
@@ -9,7 +8,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <main className="policy-page">
-      <Link className="policy-back" href="/">← Back to the lab</Link>
+      <a className="policy-back" href="/">← Back to the lab</a>
       <article>
         <h1>Terms of Use</h1>
         <p className="policy-updated">Last updated September 23, 2026</p>
@@ -57,7 +56,7 @@ export default function TermsPage() {
         <h2>Questions</h2>
         <p>
           Contact <a href="mailto:m.khordoo@gmail.com">m.khordoo@gmail.com</a>.
-          See the <Link href="/privacy">Privacy Notice</Link> for how keys and
+          See the <a href="/privacy">Privacy Notice</a> for how keys and
           mission data are handled.
         </p>
       </article>
