@@ -633,17 +633,23 @@ export default function Home() {
             onRequestRemoval={() => {
               setOpenRouterKey('');
               setEditingOpenRouter(false);
+              setEditingPlannerModel(false);
+              setPlannerModelDraft(null);
               setRemoveOpenRouter(true);
             }}
             onUndoRemoval={() => setRemoveOpenRouter(false)}
           />
           <div className="credential-model-field">
             <label htmlFor="planner-model">OpenRouter System 2 model</label>
-            {providerConfig.savedCredentials.openRouter &&
-            !editingPlannerModel &&
-            !removeOpenRouter ? (
+            {!editingPlannerModel ? (
               <div className="credential-model-display">
-                <span>{providerConfig.plannerModel}</span>
+                <span>
+                  {providerConfig.plannerModel}
+                  {providerConfig.plannerModel ===
+                    providerConfig.defaultPlannerModel && (
+                    <small> · default</small>
+                  )}
+                </span>
                 <button
                   type="button"
                   className="credential-icon-button"
@@ -651,11 +657,34 @@ export default function Home() {
                     setEditingPlannerModel(true);
                     setPlannerModelDraft(providerConfig.plannerModel);
                   }}
-                  disabled={credentialBusy}
+                  disabled={
+                    !providerConfig.credentialStorageEnabled ||
+                    credentialBusy ||
+                    removeOpenRouter
+                  }
                   aria-label="Edit OpenRouter System 2 model"
                   title="Edit model"
                 >
                   <Pencil size={14} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className="credential-icon-button"
+                  onClick={() => {
+                    setEditingPlannerModel(true);
+                    setPlannerModelDraft(providerConfig.defaultPlannerModel);
+                  }}
+                  disabled={
+                    !providerConfig.credentialStorageEnabled ||
+                    credentialBusy ||
+                    removeOpenRouter ||
+                    providerConfig.plannerModel ===
+                      providerConfig.defaultPlannerModel
+                  }
+                  aria-label="Reset OpenRouter System 2 model to default"
+                  title="Reset to default"
+                >
+                  <RotateCcw size={14} aria-hidden="true" />
                 </button>
               </div>
             ) : (
@@ -666,6 +695,7 @@ export default function Home() {
                   autoComplete="off"
                   spellCheck={false}
                   maxLength={150}
+                  autoFocus
                   value={plannerModelDraft ?? providerConfig.plannerModel}
                   onChange={(event) => setPlannerModelDraft(event.target.value)}
                   disabled={
@@ -674,28 +704,25 @@ export default function Home() {
                     removeOpenRouter
                   }
                 />
-                {editingPlannerModel && (
-                  <button
-                    type="button"
-                    className="credential-icon-button"
-                    onClick={() => {
-                      setEditingPlannerModel(false);
-                      setPlannerModelDraft(null);
-                    }}
-                    disabled={credentialBusy}
-                    aria-label="Cancel editing OpenRouter System 2 model"
-                    title="Cancel"
-                  >
-                    <X size={15} aria-hidden="true" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="credential-icon-button"
+                  onClick={() => {
+                    setEditingPlannerModel(false);
+                    setPlannerModelDraft(null);
+                  }}
+                  disabled={credentialBusy}
+                  aria-label="Cancel editing OpenRouter System 2 model"
+                  title="Cancel"
+                >
+                  <X size={15} aria-hidden="true" />
+                </button>
               </div>
             )}
             <small>
-              Default: {providerConfig.defaultPlannerModel}. Used only when
-              System 2 is on. Clear the field and save to restore the default.
-              Save an OpenRouter key to keep a custom model. Choose one that
-              supports structured output; costs vary.
+              Used only when System 2 is on. A custom model needs an OpenRouter
+              key and structured output support; costs vary. Clear the field
+              and save to restore the default.
             </small>
           </div>
           <CredentialField

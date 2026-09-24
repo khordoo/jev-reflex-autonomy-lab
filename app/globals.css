@@ -1344,6 +1344,9 @@ footer a,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.credential-model-display small {
+  color: #8195a2;
+}
 .credential-model-field input {
   width: 100%;
   border: 1px solid #344754;
