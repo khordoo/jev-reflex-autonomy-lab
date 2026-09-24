@@ -14,6 +14,7 @@ import {
   Cloud,
   Cpu,
   Download,
+  LockKeyhole,
   Orbit,
   Pause,
   Pencil,
@@ -101,9 +102,6 @@ function CredentialField({
       <legend className="credential-field-label" id={`${id}-field-label`}>
         {label} {optional && <span>optional</span>}
       </legend>
-      {saved && !pendingRemoval && (
-        <span className="saved-key-badge">Saved</span>
-      )}
       {pendingRemoval ? (
         <output className="credential-pending-remove">
           <span>Will be removed when you save.</span>
@@ -572,10 +570,17 @@ export default function Home() {
               account.
             </DialogDescription>
           </DialogHeader>
-          <p className="credential-notice">
-            Keys are encrypted by the server and saved in this browser’s
-            HttpOnly cookie. Only your provider can revoke the keys themselves.
-          </p>
+          <div className="credential-notice">
+            <LockKeyhole size={18} aria-hidden="true" />
+            <div>
+              <strong>How your keys are handled</strong>
+              <p>
+                The server encrypts your keys into a cookie stored in this
+                browser. This app has no key database. The server decrypts them
+                to make your requests to OpenRouter or TypeSafe.
+              </p>
+            </div>
+          </div>
           {!providerConfig.credentialStorageEnabled && (
             <p className="credential-warning" role="alert">
               Secure key storage is not configured on this server, so personal

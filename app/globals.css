@@ -1165,6 +1165,27 @@ footer {
   border-radius: 5px;
   padding: 10px;
 }
+.credential-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid #344754;
+  border-radius: 7px;
+  background: #111d26;
+  padding: 11px 12px;
+}
+.credential-notice > svg {
+  flex: none;
+  margin-top: 2px;
+  color: #b7f580;
+}
+.credential-notice strong {
+  color: #dce8df;
+  font-size: 12px;
+}
+.credential-notice p {
+  margin: 3px 0 0;
+}
 .credential-field {
   position: relative;
   display: grid;
@@ -1176,7 +1197,6 @@ footer {
 }
 .credential-field-label {
   display: block;
-  max-width: calc(100% - 62px);
   margin: 0 0 1px;
   padding: 0;
   color: #d7e0e5;
@@ -1185,18 +1205,6 @@ footer {
 .credential-field-label span {
   color: #8197a5;
   font-size: 11px;
-}
-.saved-key-badge {
-  position: absolute;
-  top: 0;
-  right: 0;
-  border: 1px solid #42613f;
-  border-radius: 999px;
-  background: #18281a;
-  color: #b7f580;
-  padding: 2px 8px;
-  font-size: 10px;
-  font-weight: 600;
 }
 .saved-key-row,
 .credential-edit-control {
