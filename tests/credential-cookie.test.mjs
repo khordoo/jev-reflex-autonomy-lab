@@ -6,6 +6,7 @@ import {
   decryptCredentialValue,
   encryptCredentialValue,
   sameOriginRequest,
+  validPlannerModel,
 } from '../lib/reflex/credential-cookie-crypto.ts';
 
 const secret = 'a-private-test-secret-with-at-least-32-characters';
@@ -14,6 +15,7 @@ test('encrypted cookie value round trips without exposing either key', async () 
   const credentials = {
     openRouterApiKey: 'or-private-example',
     typesafeApiKey: 'ts-private-example',
+    openRouterModel: 'z-ai/glm-5.3',
   };
   const value = await encryptCredentialValue(
     credentials,
@@ -23,6 +25,7 @@ test('encrypted cookie value round trips without exposing either key', async () 
 
   assert.equal(value.includes(credentials.openRouterApiKey), false);
   assert.equal(value.includes(credentials.typesafeApiKey), false);
+  assert.equal(value.includes(credentials.openRouterModel), false);
   assert.deepEqual(await decryptCredentialValue(value, secret), credentials);
 
   const header = buildCredentialCookie(value, 3600, true);
@@ -31,6 +34,20 @@ test('encrypted cookie value round trips without exposing either key', async () 
   assert.match(header, /SameSite=Strict/);
   assert.match(header, /Max-Age=3600/);
   assert.ok(header.length <= 4096);
+});
+
+test('planner model IDs are validated before saving and after decrypting', async () => {
+  assert.equal(validPlannerModel('z-ai/glm-5.3'), true);
+  assert.equal(validPlannerModel('provider/model:free'), true);
+  assert.equal(validPlannerModel('model with spaces'), false);
+  assert.equal(validPlannerModel('x'.repeat(151)), false);
+
+  const value = await encryptCredentialValue(
+    { openRouterApiKey: 'or-private-example', openRouterModel: 'invalid model' },
+    secret,
+    Date.now() + 60_000,
+  );
+  assert.deepEqual(await decryptCredentialValue(value, secret), {});
 });
 
 test('tampered cookie values are rejected', async () => {

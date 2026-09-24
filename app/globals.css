@@ -1318,6 +1318,49 @@ footer a,
   color: #8195a2;
   font-size: 11px;
 }
+.credential-model-field {
+  display: grid;
+  gap: 7px;
+}
+.credential-model-field label {
+  color: #d7e0e5;
+  font-size: 13px;
+}
+.credential-model-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.credential-model-display span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #344754;
+  border-radius: 5px;
+  background: #0b1219;
+  color: #e8eef0;
+  padding: 10px 11px;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.credential-model-field input {
+  width: 100%;
+  border: 1px solid #344754;
+  border-radius: 5px;
+  background: #0b1219;
+  color: #e8eef0;
+  padding: 10px 11px;
+  font-size: 13px;
+}
+.credential-model-field input:disabled {
+  opacity: 0.55;
+}
+.credential-model-field small {
+  color: #8195a2;
+  font-size: 11px;
+  line-height: 1.45;
+}
 .credential-edit-cancel {
   color: #9eafb9;
 }

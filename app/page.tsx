@@ -55,6 +55,7 @@ type ProviderConfig = {
   jevProvider: string;
   plannerConfigured: boolean;
   plannerModel: string;
+  defaultPlannerModel: string;
   savedCredentials: { openRouter: boolean; typeSafe: boolean };
   credentialStorageEnabled: boolean;
   sharedKeysEnabled: boolean;
@@ -196,6 +197,7 @@ export default function Home() {
     jevProvider: 'none',
     plannerConfigured: false,
     plannerModel: 'z-ai/glm-5.3',
+    defaultPlannerModel: 'z-ai/glm-5.3',
     savedCredentials: { openRouter: false, typeSafe: false },
     credentialStorageEnabled: false,
     sharedKeysEnabled: false,
@@ -204,6 +206,8 @@ export default function Home() {
   const [credentialsOpen, setCredentialsOpen] = useState(false);
   const [openRouterKey, setOpenRouterKey] = useState('');
   const [typesafeKey, setTypesafeKey] = useState('');
+  const [plannerModelDraft, setPlannerModelDraft] = useState<string | null>(null);
+  const [editingPlannerModel, setEditingPlannerModel] = useState(false);
   const [editingOpenRouter, setEditingOpenRouter] = useState(false);
   const [editingTypeSafe, setEditingTypeSafe] = useState(false);
   const [rememberCredentials, setRememberCredentials] = useState(false);
@@ -216,6 +220,8 @@ export default function Home() {
   function clearCredentialDraft() {
     setOpenRouterKey('');
     setTypesafeKey('');
+    setPlannerModelDraft(null);
+    setEditingPlannerModel(false);
     setEditingOpenRouter(false);
     setEditingTypeSafe(false);
     setRemoveOpenRouter(false);
@@ -264,6 +270,15 @@ export default function Home() {
       if (typesafeKey.trim()) body.typesafeApiKey = typesafeKey.trim();
       if (removeOpenRouter) body.removeOpenRouter = true;
       if (removeTypeSafe) body.removeTypeSafe = true;
+      const modelChanged =
+        remainingOpenRouter &&
+        plannerModelDraft !== null &&
+        plannerModelDraft.trim() !== providerConfig.plannerModel;
+      if (modelChanged)
+        body.openRouterModel =
+          plannerModelDraft.trim() === providerConfig.defaultPlannerModel
+            ? null
+            : plannerModelDraft.trim() || null;
       const response = removesLastKey
         ? await fetch('/api/providers', { method: 'DELETE' })
         : await fetch('/api/providers', {
@@ -279,9 +294,15 @@ export default function Home() {
           'error' in result ? result.error : 'Could not save credentials.',
         );
       if (removesLastKey) await checkProviders();
-      else setProviderConfig(result as ProviderConfig);
+      else {
+        const updatedConfig = result as ProviderConfig;
+        setProviderConfig(updatedConfig);
+        if (modelChanged) controller.setPlannerName(updatedConfig.plannerModel);
+      }
       setOpenRouterKey('');
       setTypesafeKey('');
+      setPlannerModelDraft(null);
+      setEditingPlannerModel(false);
       setEditingOpenRouter(false);
       setEditingTypeSafe(false);
       setRemoveOpenRouter(false);
@@ -290,7 +311,7 @@ export default function Home() {
       setCredentialMessage(
         removesLastKey
           ? 'Saved credentials removed from this browser.'
-          : `Provider keys saved for ${rememberCredentials ? '7 days' : '1 hour'} in this browser.`,
+          : `Settings saved for ${rememberCredentials ? '7 days' : '1 hour'} in this browser.`,
       );
       setConfigError(false);
       if (removeOpenRouter || removeTypeSafe || removesLastKey) {
@@ -319,6 +340,8 @@ export default function Home() {
       await checkProviders();
       setOpenRouterKey('');
       setTypesafeKey('');
+      setPlannerModelDraft(null);
+      setEditingPlannerModel(false);
       setEditingOpenRouter(false);
       setEditingTypeSafe(false);
       setRemoveOpenRouter(false);
@@ -614,6 +637,67 @@ export default function Home() {
             }}
             onUndoRemoval={() => setRemoveOpenRouter(false)}
           />
+          <div className="credential-model-field">
+            <label htmlFor="planner-model">OpenRouter System 2 model</label>
+            {providerConfig.savedCredentials.openRouter &&
+            !editingPlannerModel &&
+            !removeOpenRouter ? (
+              <div className="credential-model-display">
+                <span>{providerConfig.plannerModel}</span>
+                <button
+                  type="button"
+                  className="credential-icon-button"
+                  onClick={() => {
+                    setEditingPlannerModel(true);
+                    setPlannerModelDraft(providerConfig.plannerModel);
+                  }}
+                  disabled={credentialBusy}
+                  aria-label="Edit OpenRouter System 2 model"
+                  title="Edit model"
+                >
+                  <Pencil size={14} aria-hidden="true" />
+                </button>
+              </div>
+            ) : (
+              <div className="credential-edit-control">
+                <input
+                  id="planner-model"
+                  type="text"
+                  autoComplete="off"
+                  spellCheck={false}
+                  maxLength={150}
+                  value={plannerModelDraft ?? providerConfig.plannerModel}
+                  onChange={(event) => setPlannerModelDraft(event.target.value)}
+                  disabled={
+                    !providerConfig.credentialStorageEnabled ||
+                    credentialBusy ||
+                    removeOpenRouter
+                  }
+                />
+                {editingPlannerModel && (
+                  <button
+                    type="button"
+                    className="credential-icon-button"
+                    onClick={() => {
+                      setEditingPlannerModel(false);
+                      setPlannerModelDraft(null);
+                    }}
+                    disabled={credentialBusy}
+                    aria-label="Cancel editing OpenRouter System 2 model"
+                    title="Cancel"
+                  >
+                    <X size={15} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            )}
+            <small>
+              Default: {providerConfig.defaultPlannerModel}. Used only when
+              System 2 is on. Clear the field and save to restore the default.
+              Save an OpenRouter key to keep a custom model. Choose one that
+              supports structured output; costs vary.
+            </small>
+          </div>
           <CredentialField
             id="typesafe-key"
             label="TypeSafe API key"
@@ -705,7 +789,12 @@ export default function Home() {
                 (!openRouterKey.trim() &&
                   !typesafeKey.trim() &&
                   !removeOpenRouter &&
-                  !removeTypeSafe)
+                  !removeTypeSafe &&
+                  (removeOpenRouter ||
+                    (!providerConfig.savedCredentials.openRouter &&
+                      !openRouterKey.trim()) ||
+                    plannerModelDraft === null ||
+                    plannerModelDraft.trim() === providerConfig.plannerModel))
               }
             >
               {credentialBusy
@@ -721,7 +810,7 @@ export default function Home() {
         <div>
           <h1>Fast System 1 with optional System 2 guidance</h1>
           <p className="intro">
-            Jev for real-time decisions. GLM 5.3 only when needed.
+            Jev for real-time decisions. An LLM advises only when needed.
           </p>
         </div>
         <div className="mode-badge">
@@ -737,7 +826,7 @@ export default function Home() {
               ? 'System 2 off'
               : plannerMode === 'mock'
                 ? 'mock planner'
-                : 'GLM 5.3 planner'}
+                : `${providerConfig.plannerModel} planner`}
           </small>
         </div>
       </section>
@@ -1032,7 +1121,7 @@ export default function Home() {
               <span>
                 {plannerMode === 'mock'
                   ? 'Mock planner'
-                  : 'OpenRouter · GLM 5.3'}
+                  : `OpenRouter · ${providerConfig.plannerModel}`}
               </span>
               <span>
                 REV {String(control.strategy.revision).padStart(2, '0')}
@@ -1244,7 +1333,7 @@ export default function Home() {
             Local controller: runs the built-in rule-based reflexes with no
             credentials. Live API: live TypeSafe Jev via{' '}
             {providerConfig.jevProvider}
-            {system2Enabled ? ' + GLM 5.3' : ' only'} over the network. The
+            {system2Enabled ? ` + ${providerConfig.plannerModel}` : ' only'} over the network. The
             flight environment stays simulated in both modes.
             {mode === 'jev'
               ? ' Live mode sets a 20% starting gate; the gate remains adjustable.'

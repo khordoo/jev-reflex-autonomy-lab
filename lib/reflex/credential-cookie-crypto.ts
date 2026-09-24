@@ -1,7 +1,12 @@
 export type SavedCredentials = {
   openRouterApiKey?: string;
   typesafeApiKey?: string;
+  openRouterModel?: string;
 };
+
+export function validPlannerModel(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= 150 && /^[\w./:-]+$/.test(value);
+}
 
 export function credentialsWithSourcePriority(
   saved: SavedCredentials,
@@ -96,12 +101,17 @@ export async function decryptCredentialValue(
       (payload.typesafeApiKey !== undefined &&
         (typeof payload.typesafeApiKey !== 'string' ||
           payload.typesafeApiKey.length > MAX_KEY_LENGTH)) ||
+      (payload.openRouterModel !== undefined &&
+        !validPlannerModel(payload.openRouterModel)) ||
       (!payload.openRouterApiKey && !payload.typesafeApiKey)
     )
       return {};
     return {
       openRouterApiKey: payload.openRouterApiKey,
       typesafeApiKey: payload.typesafeApiKey,
+      ...(payload.openRouterModel
+        ? { openRouterModel: payload.openRouterModel }
+        : {}),
     };
   } catch {
     return {};

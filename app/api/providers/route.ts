@@ -5,6 +5,7 @@ import {
   readSavedCredentials,
   sameOriginRequest,
   validCredentialInput,
+  validPlannerModel,
 } from '@/lib/reflex/credential-cookie';
 
 export async function GET(request: Request) {
@@ -72,6 +73,9 @@ export async function POST(request: Request) {
         typeof body.removeOpenRouter !== 'boolean') ||
       (body.removeTypeSafe !== undefined &&
         typeof body.removeTypeSafe !== 'boolean') ||
+      (body.openRouterModel !== undefined &&
+        body.openRouterModel !== null &&
+        !validPlannerModel(body.openRouterModel)) ||
       (body.rememberForSevenDays !== undefined &&
         typeof body.rememberForSevenDays !== 'boolean')
     )
@@ -83,7 +87,19 @@ export async function POST(request: Request) {
     const next = {
       openRouterApiKey: body.removeOpenRouter ? undefined : openRouterApiKey,
       typesafeApiKey: body.removeTypeSafe ? undefined : typesafeApiKey,
+      openRouterModel: body.removeOpenRouter
+        ? undefined
+        : body.openRouterModel === null
+          ? undefined
+          : typeof body.openRouterModel === 'string'
+            ? body.openRouterModel
+            : saved.openRouterModel,
     };
+    if (next.openRouterModel && !next.openRouterApiKey)
+      return Response.json(
+        { error: 'Save an OpenRouter key before choosing a planner model.' },
+        { status: 400 },
+      );
     if (!next.openRouterApiKey && !next.typesafeApiKey)
       return Response.json(
         { error: 'Add at least one key, or remove all saved credentials.' },

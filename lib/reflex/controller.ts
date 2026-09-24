@@ -33,6 +33,9 @@ export class Controller {
     public decisionProvider: DecisionProvider,
     public planner: StrategyProvider,
   ) {}
+  setPlannerName(name: string) {
+    this.planner.name = name;
+  }
   activate() {
     this.disposed = false;
   }

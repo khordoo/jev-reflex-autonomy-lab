@@ -4,7 +4,9 @@ import {
   decryptCredentialValue,
   encryptCredentialValue,
   type SavedCredentials,
+  validPlannerModel,
 } from './credential-cookie-crypto';
+import { DEFAULT_PLANNER_MODEL } from './openrouter-server';
 
 export const CREDENTIAL_COOKIE = 'reflex_credentials';
 const SHORT_TTL_SECONDS = 60 * 60;
@@ -26,6 +28,7 @@ export type ProviderConfiguration = {
   jevProvider: string;
   plannerConfigured: boolean;
   plannerModel: string;
+  defaultPlannerModel: string;
   savedCredentials: { openRouter: boolean; typeSafe: boolean };
   credentialStorageEnabled: boolean;
   sharedKeysEnabled: boolean;
@@ -138,6 +141,7 @@ export function providerConfiguration(
   const openRouterKey = effective.openRouterApiKey;
   const typesafeConfigured = Boolean(typesafeKey);
   const openRouterConfigured = Boolean(openRouterKey);
+  const defaultPlannerModel = settings().OPENROUTER_MODEL || DEFAULT_PLANNER_MODEL;
   return {
     jevConfigured: typesafeConfigured || openRouterConfigured,
     jevProvider: typesafeConfigured
@@ -150,10 +154,8 @@ export function providerConfiguration(
           : 'shared OpenRouter key'
         : 'none',
     plannerConfigured: openRouterConfigured,
-    plannerModel:
-      settings().OPENROUTER_MODEL ||
-      process.env.OPENROUTER_MODEL ||
-      'z-ai/glm-5.3',
+    plannerModel: savedCredentials.openRouterModel || defaultPlannerModel,
+    defaultPlannerModel,
     savedCredentials: {
       openRouter: Boolean(savedCredentials.openRouterApiKey),
       typeSafe: Boolean(savedCredentials.typesafeApiKey),
@@ -174,3 +176,5 @@ export function validCredentialInput(value: unknown): value is string {
     value.trim().length <= MAX_KEY_LENGTH
   );
 }
+
+export { validPlannerModel };

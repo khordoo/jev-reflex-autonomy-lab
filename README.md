@@ -43,7 +43,7 @@ Canvas simulation loop
 System 1 — TypeSafe Jev
 └── fast typed action decisions for every active drone
 
-System 2 — OpenRouter / GLM 5.3
+System 2 — OpenRouter / selected LLM (GLM 5.3 by default)
 └── asynchronous one-use strategy advice when confidence is low
 ```
 
@@ -106,6 +106,8 @@ The Jev adapter prefers `POST https://api.typesafe.ai/v1/systemone` with `jev-la
 ### Save credentials in this browser
 
 The Settings dialog can save personal OpenRouter and optional TypeSafe keys in an encrypted, `HttpOnly`, `Secure` (on HTTPS), `SameSite=Strict` cookie. The server decrypts the keys only when making provider requests. By default the cookie expires after one hour; **Remember for 7 days** extends it to seven days. Removing credentials from the dialog clears the cookie; revoke a key with its provider as well if you need to invalidate it.
+
+Visitors with a saved OpenRouter key can choose their own System 2 model in Settings. The default is `z-ai/glm-5.3` (or the server's `OPENROUTER_MODEL` setting). The model choice is saved in the same encrypted browser cookie and applies to subsequent planner requests. Choose an OpenRouter model that supports structured output; availability and pricing depend on the provider.
 
 Set `CREDENTIALS_ENCRYPTION_KEY` to a private random value of at least 32 characters in the server environment. For local development, generate one with `openssl rand -base64 32` and put it in `.dev.vars`. On a production deployment, add it as a server-only secret. User-saved credentials work without a database.
 

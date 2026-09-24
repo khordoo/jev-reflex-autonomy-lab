@@ -1,10 +1,8 @@
-import {
-  callPlanner,
-  DEFAULT_PLANNER_MODEL,
-} from '@/lib/reflex/openrouter-server';
+import { callPlanner } from '@/lib/reflex/openrouter-server';
 import type { PlanningContext } from '@/lib/reflex/types';
 import {
   credentialsForRequest,
+  providerConfiguration,
   readSavedCredentials,
   sameOriginRequest,
 } from '@/lib/reflex/credential-cookie';
@@ -52,7 +50,7 @@ export async function POST(request: Request) {
     const strategy = await callPlanner(
       context,
       openRouterApiKey,
-      process.env.OPENROUTER_MODEL || DEFAULT_PLANNER_MODEL,
+      providerConfiguration(saved).plannerModel,
       AbortSignal.any([request.signal, AbortSignal.timeout(28000)]),
     );
     return Response.json(strategy, {
