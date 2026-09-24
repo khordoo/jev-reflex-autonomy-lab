@@ -62,20 +62,6 @@ npm run dev
 
 Open the printed local URL. The app starts with development mocks, so it works without provider credentials.
 
-## Deploy to Vercel
-
-Import the repository into Vercel and keep the project root at the repository root. Vercel uses the Nitro Vite adapter for the server-rendered app and API routes; the existing Cloudflare/Wrangler setup remains available for local development. The Vercel build uses `npm run build` and emits Vercel's Build Output API bundle.
-
-Add one server-only environment variable in Vercel's project settings:
-
-```text
-CREDENTIALS_ENCRYPTION_KEY=<a private random value of at least 32 characters>
-```
-
-Generate a value with `openssl rand -base64 32`. Do not prefix it with `NEXT_PUBLIC_` or `VITE_`. Visitors provide their own OpenRouter or TypeSafe keys in the Settings dialog; the deployment does not need provider keys. `ALLOW_SHARED_API_KEYS` stays unset so visitors cannot use deployment provider credits. Local `.dev.vars` files are ignored and are not part of the deployment.
-
-To collect page-view statistics, enable **Web Analytics** for the Vercel project in its dashboard. The app includes `@vercel/analytics`; enabling the service and deploying this branch makes the analytics endpoint available. The site discloses this in its [Privacy Notice](app/privacy/page.tsx). Visitors must agree to the [Terms of Use](app/terms/page.tsx) when saving a new provider key.
-
 Useful checks:
 
 ```bash
@@ -161,3 +147,17 @@ availability and rate limits may be tighter than the default model.
 ## Project status
 
 This is an experimental autonomy visualization, not a production flight controller. The mock scenario and focused runtime checks cover the core simulation behavior. Live fleet success varies with model decisions, provider latency, seed, threshold, and fleet size.
+
+## Deploy to Vercel (optional)
+
+You can run the demo locally without deploying it. To host it for others, import the repository into Vercel and keep the project root at the repository root. Vercel uses the Nitro Vite adapter for the server-rendered app and API routes; the existing Cloudflare/Wrangler setup remains available for local development. The Vercel build uses `npm run build` and emits Vercel's Build Output API bundle.
+
+Add one server-only environment variable in Vercel's project settings:
+
+```text
+CREDENTIALS_ENCRYPTION_KEY=<a private random value of at least 32 characters>
+```
+
+Generate a value with `openssl rand -base64 32`. Do not prefix it with `NEXT_PUBLIC_` or `VITE_`. Visitors provide their own OpenRouter or TypeSafe keys in the Settings dialog; the deployment does not need provider keys. `ALLOW_SHARED_API_KEYS` stays unset so visitors cannot use deployment provider credits. Local `.dev.vars` files are ignored and are not part of the deployment.
+
+To collect page-view statistics, enable **Web Analytics** for the Vercel project in its dashboard. The app includes `@vercel/analytics`; enabling the service and deploying this branch makes the analytics endpoint available. The site discloses this in its [Privacy Notice](app/privacy/page.tsx). Visitors must agree to the [Terms of Use](app/terms/page.tsx) when saving a new provider key.
