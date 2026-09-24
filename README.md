@@ -74,6 +74,8 @@ CREDENTIALS_ENCRYPTION_KEY=<a private random value of at least 32 characters>
 
 Generate a value with `openssl rand -base64 32`. Do not prefix it with `NEXT_PUBLIC_` or `VITE_`. Visitors provide their own OpenRouter or TypeSafe keys in the Settings dialog; the deployment does not need provider keys. `ALLOW_SHARED_API_KEYS` stays unset so visitors cannot use deployment provider credits. Local `.dev.vars` files are ignored and are not part of the deployment.
 
+To collect page-view statistics, enable **Web Analytics** for the Vercel project in its dashboard. The app includes `@vercel/analytics`; enabling the service and deploying this branch makes the analytics endpoint available. The site discloses this in its [Privacy Notice](app/privacy/page.tsx). Visitors must agree to the [Terms of Use](app/terms/page.tsx) when saving a new provider key.
+
 Useful checks:
 
 ```bash

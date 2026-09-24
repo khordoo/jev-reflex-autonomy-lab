@@ -40,6 +40,15 @@ export async function POST(request: Request) {
         { status: 400 },
       );
 
+    if (
+      (body.openRouterApiKey !== undefined || body.typesafeApiKey !== undefined) &&
+      body.acceptedTerms !== true
+    )
+      return Response.json(
+        { error: 'Please agree to the Terms of Use before saving a key.' },
+        { status: 400 },
+      );
+
     const saved = await readSavedCredentials(request);
     const openRouterApiKey =
       body.openRouterApiKey === undefined

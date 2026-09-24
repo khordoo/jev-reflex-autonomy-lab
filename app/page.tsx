@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import {
   Dialog,
@@ -208,6 +209,7 @@ export default function Home() {
   const [rememberCredentials, setRememberCredentials] = useState(false);
   const [removeOpenRouter, setRemoveOpenRouter] = useState(false);
   const [removeTypeSafe, setRemoveTypeSafe] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [credentialBusy, setCredentialBusy] = useState(false);
   const [credentialMessage, setCredentialMessage] = useState('');
   const [chartTime, setChartTime] = useState(0);
@@ -219,6 +221,7 @@ export default function Home() {
     setRemoveOpenRouter(false);
     setRemoveTypeSafe(false);
     setRememberCredentials(false);
+    setAgreedToTerms(false);
     setCredentialMessage('');
   }
   function setCredentialDialogOpen(open: boolean) {
@@ -255,6 +258,7 @@ export default function Home() {
         !remainingTypeSafe;
       const body: Record<string, unknown> = {
         rememberForSevenDays: rememberCredentials,
+        acceptedTerms: agreedToTerms,
       };
       if (openRouterKey.trim()) body.openRouterApiKey = openRouterKey.trim();
       if (typesafeKey.trim()) body.typesafeApiKey = typesafeKey.trim();
@@ -282,6 +286,7 @@ export default function Home() {
       setEditingTypeSafe(false);
       setRemoveOpenRouter(false);
       setRemoveTypeSafe(false);
+      setAgreedToTerms(false);
       setCredentialMessage(
         removesLastKey
           ? 'Saved credentials removed from this browser.'
@@ -651,8 +656,23 @@ export default function Home() {
           <p className="credential-revoke-note">
             Removing a key here clears this browser’s saved copy. To invalidate
             the provider key itself, revoke it in your OpenRouter or TypeSafe
-            account.
+            account. See our <Link href="/privacy">Privacy Notice</Link> and{' '}
+            <Link href="/terms">Terms of Use</Link>.
           </p>
+          {(openRouterKey.trim() || typesafeKey.trim()) && (
+            <label className="credential-agreement">
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(event) => setAgreedToTerms(event.target.checked)}
+                disabled={credentialBusy}
+              />
+              <span>
+                I agree to the <Link href="/terms" target="_blank" rel="noopener noreferrer">Terms of Use</Link> and
+                acknowledge the <Link href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Notice</Link>.
+              </span>
+            </label>
+          )}
           {credentialMessage && (
             <output className="credential-message">{credentialMessage}</output>
           )}
@@ -674,6 +694,8 @@ export default function Home() {
               disabled={
                 !providerConfig.credentialStorageEnabled ||
                 credentialBusy ||
+                ((Boolean(openRouterKey.trim()) || Boolean(typesafeKey.trim())) &&
+                  !agreedToTerms) ||
                 (!openRouterKey.trim() &&
                   !typesafeKey.trim() &&
                   !removeOpenRouter &&
@@ -1263,9 +1285,10 @@ export default function Home() {
       </section>
       <footer>
         <span>REFLEX LAB / MULTI-DRONE EXPERIMENT</span>
-        <span>
-          Structured observations → typed actions → measurable outcomes
-        </span>
+        <nav aria-label="Site policies">
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
+        </nav>
       </footer>
     </main>
   );

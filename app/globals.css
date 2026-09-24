@@ -834,6 +834,46 @@ footer {
   color: #597281;
   letter-spacing: 0.6px;
 }
+footer nav {
+  display: flex;
+  gap: 18px;
+}
+footer a,
+.credential-revoke-note a,
+.policy-page a {
+  color: #a5d4eb;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.policy-page {
+  max-width: 760px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 52px 24px 80px;
+  color: #d6e1e8;
+}
+.policy-page article {
+  margin-top: 30px;
+}
+.policy-page h1 {
+  margin: 0 0 6px;
+  color: #f0f5f7;
+  font-size: clamp(28px, 4vw, 38px);
+}
+.policy-page h2 {
+  margin: 32px 0 8px;
+  color: #e7f0f3;
+  font-size: 18px;
+}
+.policy-page p {
+  margin: 0 0 14px;
+  color: #aabdc8;
+  line-height: 1.7;
+}
+.policy-page .policy-updated {
+  color: #7894a4;
+  font-size: 13px;
+}
 .error-banner {
   padding: 14px;
   border: 1px solid #a77844;
@@ -1313,6 +1353,26 @@ footer {
   min-width: 14px;
   margin: 0;
   accent-color: #b7f580;
+}
+.credential-agreement {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #c0cdd4;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.credential-agreement input {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  margin: 2px 0 0;
+  accent-color: #b7f580;
+}
+.credential-agreement a {
+  color: #a5d4eb;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .credential-remember {
   font-size: 12px;
