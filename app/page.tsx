@@ -655,8 +655,14 @@ export default function Home() {
           <p className="credential-revoke-note">
             Removing a key here clears this browser’s saved copy. To invalidate
             the provider key itself, revoke it in your OpenRouter or TypeSafe
-            account. See our <a href="/privacy">Privacy Notice</a> and{' '}
-            <a href="/terms">Terms of Use</a>.
+            account. See our{' '}
+            <a href="/privacy" target="_blank" rel="noopener noreferrer">
+              Privacy Notice
+            </a>{' '}
+            and{' '}
+            <a href="/terms" target="_blank" rel="noopener noreferrer">
+              Terms of Use
+            </a>.
           </p>
           {(openRouterKey.trim() || typesafeKey.trim()) && (
             <label className="credential-agreement">
