@@ -1364,6 +1364,14 @@ footer a,
   font-size: 11px;
   line-height: 1.45;
 }
+.credential-model-message {
+  color: #b7f580;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.credential-model-message.is-error {
+  color: #efc17f;
+}
 .credential-edit-cancel {
   color: #9eafb9;
 }

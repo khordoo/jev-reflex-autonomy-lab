@@ -219,6 +219,10 @@ export default function Home() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [credentialBusy, setCredentialBusy] = useState(false);
   const [credentialMessage, setCredentialMessage] = useState('');
+  const [modelFeedback, setModelFeedback] = useState<{
+    message: string;
+    error: boolean;
+  } | null>(null);
   const [chartTime, setChartTime] = useState(0);
   function clearCredentialDraft() {
     setOpenRouterKey('');
@@ -232,6 +236,7 @@ export default function Home() {
     setRememberCredentials(false);
     setAgreedToTerms(false);
     setCredentialMessage('');
+    setModelFeedback(null);
   }
   function setCredentialDialogOpen(open: boolean) {
     if (!open) clearCredentialDraft();
@@ -252,6 +257,7 @@ export default function Home() {
     void checkProviders();
   }, []);
   async function saveCredentials() {
+    setModelFeedback(null);
     if (
       editingPlannerModel &&
       plannerModelDraft !== null &&
@@ -343,10 +349,13 @@ export default function Home() {
   async function savePlannerModel(model: string) {
     const nextModel = model.trim();
     const needsOpenRouterKey = !providerConfig.savedCredentials.openRouter;
+    setCredentialMessage('');
     if (!nextModel) {
-      setCredentialMessage(
-        'Enter a model name, or use the reset icon to restore the default.',
-      );
+      setModelFeedback({
+        message:
+          'Enter a model name, or use the circular arrow to restore the default.',
+        error: true,
+      });
       return;
     }
     if (nextModel === providerConfig.plannerModel) {
@@ -355,19 +364,21 @@ export default function Home() {
       return;
     }
     if (needsOpenRouterKey && !openRouterKey.trim()) {
-      setCredentialMessage(
-        'Add an OpenRouter API key before saving a custom model.',
-      );
+      setModelFeedback({
+        message: 'Add an OpenRouter API key before saving a custom model.',
+        error: true,
+      });
       return;
     }
     if (needsOpenRouterKey && !agreedToTerms) {
-      setCredentialMessage(
-        'Agree to the Terms of Use before saving your OpenRouter key.',
-      );
+      setModelFeedback({
+        message: 'Agree to the Terms of Use before saving your OpenRouter key.',
+        error: true,
+      });
       return;
     }
     setCredentialBusy(true);
-    setCredentialMessage('');
+    setModelFeedback(null);
     try {
       const body: Record<string, unknown> = {
         openRouterModel:
@@ -400,16 +411,20 @@ export default function Home() {
         setEditingOpenRouter(false);
         setAgreedToTerms(false);
       }
-      setCredentialMessage(
-        nextModel === providerConfig.defaultPlannerModel
-          ? 'Default model restored.'
-          : 'Model saved in this browser.',
-      );
+      setModelFeedback({
+        message:
+          nextModel === providerConfig.defaultPlannerModel
+            ? 'Default model restored and saved in this browser.'
+            : 'Model saved in this browser.',
+        error: false,
+      });
       setConfigError(false);
     } catch (error) {
-      setCredentialMessage(
-        error instanceof Error ? error.message : 'Could not save model.',
-      );
+      setModelFeedback({
+        message:
+          error instanceof Error ? error.message : 'Could not save model.',
+        error: true,
+      });
     } finally {
       setCredentialBusy(false);
     }
@@ -417,6 +432,7 @@ export default function Home() {
   async function removeCredentials() {
     setCredentialBusy(true);
     setCredentialMessage('');
+    setModelFeedback(null);
     try {
       const response = await fetch('/api/providers', { method: 'DELETE' });
       const result = (await response.json()) as {
@@ -724,6 +740,7 @@ export default function Home() {
               setEditingOpenRouter(false);
               setEditingPlannerModel(false);
               setPlannerModelDraft(null);
+              setModelFeedback(null);
               setRemoveOpenRouter(true);
             }}
             onUndoRemoval={() => setRemoveOpenRouter(false)}
@@ -745,6 +762,7 @@ export default function Home() {
                   onClick={() => {
                     setEditingPlannerModel(true);
                     setPlannerModelDraft(providerConfig.plannerModel);
+                    setModelFeedback(null);
                   }}
                   disabled={
                     !providerConfig.credentialStorageEnabled ||
@@ -769,8 +787,8 @@ export default function Home() {
                     providerConfig.plannerModel ===
                       providerConfig.defaultPlannerModel
                   }
-                  aria-label="Reset OpenRouter System 2 model to default"
-                  title="Restore default model"
+                  aria-label="Restore and save the default OpenRouter System 2 model"
+                  title="Restore default and save now"
                 >
                   <RotateCcw size={14} aria-hidden="true" />
                 </button>
@@ -785,7 +803,10 @@ export default function Home() {
                   maxLength={150}
                   autoFocus
                   value={plannerModelDraft ?? providerConfig.plannerModel}
-                  onChange={(event) => setPlannerModelDraft(event.target.value)}
+                  onChange={(event) => {
+                    setPlannerModelDraft(event.target.value);
+                    setModelFeedback(null);
+                  }}
                   disabled={
                     !providerConfig.credentialStorageEnabled ||
                     credentialBusy ||
@@ -817,6 +838,7 @@ export default function Home() {
                   onClick={() => {
                     setEditingPlannerModel(false);
                     setPlannerModelDraft(null);
+                    setModelFeedback(null);
                   }}
                   disabled={credentialBusy}
                   aria-label="Cancel editing OpenRouter System 2 model"
@@ -828,9 +850,18 @@ export default function Home() {
             )}
             <small>
               Used only when System 2 is on. A custom model needs an OpenRouter
-              key and structured output support; costs vary. Click the circular
-              arrow to restore the default model.
+              key and structured output support; costs vary. The save icon
+              applies edits, and the circular arrow restores and saves the
+              default immediately.
             </small>
+            {modelFeedback && (
+              <output
+                className={`credential-model-message${modelFeedback.error ? ' is-error' : ''}`}
+                role={modelFeedback.error ? 'alert' : 'status'}
+              >
+                {modelFeedback.message}
+              </output>
+            )}
           </div>
           <CredentialField
             id="typesafe-key"
