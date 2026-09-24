@@ -56,8 +56,8 @@ test('tampered cookie values are rejected', async () => {
     secret,
     Date.now() + 60_000,
   );
-  const final = value.at(-1);
-  const tampered = `${value.slice(0, -1)}${final === 'A' ? 'B' : 'A'}`;
+  const first = value[0];
+  const tampered = `${first === 'A' ? 'B' : 'A'}${value.slice(1)}`;
   assert.deepEqual(await decryptCredentialValue(tampered, secret), {});
 });
 

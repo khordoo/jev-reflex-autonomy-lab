@@ -240,6 +240,7 @@ export default function Home() {
   const [removeTypeSafe, setRemoveTypeSafe] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [credentialBusy, setCredentialBusy] = useState(false);
+  const [credentialSaveComplete, setCredentialSaveComplete] = useState(false);
   const [credentialMessage, setCredentialMessage] = useState('');
   const [modelFeedback, setModelFeedback] = useState<{
     message: string;
@@ -257,6 +258,7 @@ export default function Home() {
     setRemoveTypeSafe(false);
     setRememberCredentials(false);
     setAgreedToTerms(false);
+    setCredentialSaveComplete(false);
     setCredentialMessage('');
     setModelFeedback(null);
   }
@@ -293,6 +295,27 @@ export default function Home() {
   useEffect(() => {
     void checkProviders();
   }, []);
+  function liveModeAvailable(config: ProviderConfig) {
+    return (
+      config.jevConfigured && (!system2Enabled || config.plannerConfigured)
+    );
+  }
+  function selectLiveMode(config: ProviderConfig) {
+    if (mode === 'jev' && plannerMode === 'openrouter') return;
+    setMode('jev');
+    setPlannerMode('openrouter');
+    setThreshold(20);
+    reset(
+      world.scenario,
+      'jev',
+      'openrouter',
+      seed,
+      droneCount,
+      system2Enabled,
+      unknownEnabled,
+      config.plannerModel,
+    );
+  }
   async function saveCredentials() {
     setModelFeedback(null);
     if (
@@ -306,8 +329,10 @@ export default function Home() {
       return;
     }
     setCredentialBusy(true);
+    setCredentialSaveComplete(false);
     setCredentialMessage('');
     try {
+      const savingNewKey = Boolean(openRouterKey.trim() || typesafeKey.trim());
       const remainingOpenRouter =
         Boolean(openRouterKey.trim()) ||
         (providerConfig.savedCredentials.openRouter && !removeOpenRouter);
@@ -349,11 +374,14 @@ export default function Home() {
         throw new Error(
           'error' in result ? result.error : 'Could not save credentials.',
         );
+      let liveSelected = false;
       if (removesLastKey) await checkProviders();
       else {
         const updatedConfig = result as ProviderConfig;
         setProviderConfig(updatedConfig);
         if (modelChanged) controller.setPlannerName(updatedConfig.plannerModel);
+        liveSelected = savingNewKey && liveModeAvailable(updatedConfig);
+        if (liveSelected) selectLiveMode(updatedConfig);
       }
       setOpenRouterKey('');
       setTypesafeKey('');
@@ -364,13 +392,22 @@ export default function Home() {
       setRemoveOpenRouter(false);
       setRemoveTypeSafe(false);
       setAgreedToTerms(false);
-      setCredentialMessage(
-        removesLastKey
-          ? 'Saved credentials removed from this browser.'
-          : `Settings saved for ${rememberCredentials ? '7 days' : '1 hour'} in this browser.`,
-      );
+      let message = removesLastKey
+        ? 'Saved credentials removed from this browser.'
+        : `Settings saved for ${rememberCredentials ? '7 days' : '1 hour'} in this browser.`;
+      if (liveSelected)
+        message +=
+          ' Live API selected. Close Settings, then launch the mission.';
+      else if (savingNewKey && system2Enabled)
+        message +=
+          ' Live API needs an OpenRouter key while System 2 is on. Add one or turn System 2 off.';
+      setCredentialMessage(message);
+      setCredentialSaveComplete(true);
       setConfigError(false);
-      if (removeOpenRouter || removeTypeSafe || removesLastKey) {
+      if (
+        removesLastKey ||
+        ((removeOpenRouter || removeTypeSafe) && !liveSelected)
+      ) {
         setMode('mock');
         setPlannerMode('mock');
         reset(world.scenario, 'mock', 'mock');
@@ -415,6 +452,7 @@ export default function Home() {
       return;
     }
     setCredentialBusy(true);
+    setCredentialSaveComplete(false);
     setModelFeedback(null);
     try {
       const body: Record<string, unknown> = {
@@ -441,6 +479,8 @@ export default function Home() {
       const updatedConfig = result as ProviderConfig;
       setProviderConfig(updatedConfig);
       controller.setPlannerName(updatedConfig.plannerModel);
+      if (needsOpenRouterKey && liveModeAvailable(updatedConfig))
+        selectLiveMode(updatedConfig);
       setPlannerModelDraft(null);
       setEditingPlannerModel(false);
       if (needsOpenRouterKey) {
@@ -452,9 +492,10 @@ export default function Home() {
         message:
           nextModel === providerConfig.defaultPlannerModel
             ? 'Default model restored and saved in this browser.'
-            : 'Model saved in this browser.',
+            : `Model saved in this browser.${needsOpenRouterKey ? ' Live API selected.' : ''}`,
         error: false,
       });
+      setCredentialSaveComplete(true);
       setConfigError(false);
     } catch (error) {
       setModelFeedback({
@@ -468,6 +509,7 @@ export default function Home() {
   }
   async function removeCredentials() {
     setCredentialBusy(true);
+    setCredentialSaveComplete(false);
     setCredentialMessage('');
     setModelFeedback(null);
     try {
@@ -487,6 +529,7 @@ export default function Home() {
       setRemoveOpenRouter(false);
       setRemoveTypeSafe(false);
       setCredentialMessage('Saved credentials removed from this browser.');
+      setCredentialSaveComplete(true);
       setMode('mock');
       setPlannerMode('mock');
       reset(world.scenario, 'mock', 'mock');
@@ -625,6 +668,7 @@ export default function Home() {
     nextCount = droneCount,
     nextSystem2 = system2Enabled,
     nextUnknownEnabled = unknownEnabled,
+    nextPlannerModel = providerConfig.plannerModel,
   ) {
     controller.dispose();
     setRunning(false);
@@ -637,7 +681,7 @@ export default function Home() {
         : new JevDecisionProvider(),
       planner === 'mock'
         ? new MockStrategyProvider()
-        : new OpenRouterStrategyProvider(providerConfig.plannerModel),
+        : new OpenRouterStrategyProvider(nextPlannerModel),
     );
     next.threshold = threshold / 100;
     next.system2Enabled = nextSystem2;
@@ -699,6 +743,15 @@ export default function Home() {
     !configError &&
     providerConfig.credentialStorageEnabled &&
     !providerConfig.jevConfigured;
+  const hasPendingCredentialChanges = Boolean(
+    openRouterKey.trim() ||
+    typesafeKey.trim() ||
+    removeOpenRouter ||
+    removeTypeSafe ||
+    (plannerModelDraft !== null &&
+      plannerModelDraft.trim() !== providerConfig.plannerModel),
+  );
+  const showDoneButton = credentialSaveComplete && !hasPendingCredentialChanges;
   return (
     <main>
       <header className="topbar">
@@ -1020,30 +1073,40 @@ export default function Home() {
               Remove all saved keys
             </button>
             <button
+              type="button"
               className="save-credentials-button"
-              onClick={() => void saveCredentials()}
+              onClick={() =>
+                showDoneButton
+                  ? setCredentialDialogOpen(false)
+                  : void saveCredentials()
+              }
               disabled={
-                !providerConfig.credentialStorageEnabled ||
-                credentialBusy ||
-                ((Boolean(openRouterKey.trim()) ||
-                  Boolean(typesafeKey.trim())) &&
-                  !agreedToTerms) ||
-                (!openRouterKey.trim() &&
-                  !typesafeKey.trim() &&
-                  !removeOpenRouter &&
-                  !removeTypeSafe &&
-                  (removeOpenRouter ||
-                    (!providerConfig.savedCredentials.openRouter &&
-                      !openRouterKey.trim()) ||
-                    plannerModelDraft === null ||
-                    plannerModelDraft.trim() === providerConfig.plannerModel))
+                showDoneButton
+                  ? credentialBusy
+                  : !providerConfig.credentialStorageEnabled ||
+                    credentialBusy ||
+                    ((Boolean(openRouterKey.trim()) ||
+                      Boolean(typesafeKey.trim())) &&
+                      !agreedToTerms) ||
+                    (!openRouterKey.trim() &&
+                      !typesafeKey.trim() &&
+                      !removeOpenRouter &&
+                      !removeTypeSafe &&
+                      (removeOpenRouter ||
+                        (!providerConfig.savedCredentials.openRouter &&
+                          !openRouterKey.trim()) ||
+                        plannerModelDraft === null ||
+                        plannerModelDraft.trim() ===
+                          providerConfig.plannerModel))
               }
             >
-              {credentialBusy
-                ? 'Saving…'
-                : removeOpenRouter || removeTypeSafe
-                  ? 'Save changes'
-                  : 'Save credentials'}
+              {showDoneButton
+                ? 'Done'
+                : credentialBusy
+                  ? 'Saving…'
+                  : removeOpenRouter || removeTypeSafe
+                    ? 'Save changes'
+                    : 'Save credentials'}
             </button>
           </DialogFooter>
         </DialogContent>
