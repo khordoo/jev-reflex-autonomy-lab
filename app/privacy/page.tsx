@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Privacy Notice — Jev Reflex Autonomy Lab',
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <main className="policy-page">
-      <a className="policy-back" href="/">← Back to the lab</a>
+      <Link className="policy-back" href="/">← Back to the lab</Link>
       <article>
         <h1>Privacy Notice</h1>
         <p className="policy-updated">Last updated September 23, 2026</p>
@@ -20,14 +21,14 @@ export default function PrivacyPage() {
 
         <h2>Provider keys</h2>
         <p>
-          When you save a key, our server encrypts it and sends the encrypted
-          value back in an HttpOnly cookie stored by your browser. The app does
-          not keep a separate key database. The cookie expires after one hour,
-          or seven days if you select that option. The server decrypts the key
-          when you make a live provider request; your provider receives it to
-          authenticate that request. Remove saved keys in Settings to clear the
-          browser cookie. To invalidate a key everywhere, revoke it with its
-          provider.
+          When you save or use a provider key, it is transmitted to this
+          application&apos;s server. The server encrypts the key before returning
+          it to your browser in an HttpOnly cookie. The app does not keep a
+          separate key database. The cookie expires after one hour, or seven
+          days if you select that option. The server decrypts the key when
+          needed to authenticate a live provider request; your provider receives
+          it for that request. Remove saved keys in Settings to clear the browser
+          cookie. To invalidate a key everywhere, revoke it with its provider.
         </p>
 
         <h2>Simulation data</h2>
@@ -43,8 +44,9 @@ export default function PrivacyPage() {
         <p>
           The site host processes web requests and may retain standard request
           metadata and diagnostic logs under its own policies. This app does
-          not store provider keys in an application database. Avoid putting
-          personal or confidential information into mission inputs or exports.
+          not store provider keys in an application database or intentionally
+          log provider API keys. Avoid putting personal or confidential
+          information into mission inputs or exports.
         </p>
 
         <h2>Web analytics</h2>
@@ -52,18 +54,20 @@ export default function PrivacyPage() {
           The hosted site uses Vercel Web Analytics to measure page views and
           basic visit statistics, such as page, referrer, device type, and
           approximate location. Vercel says this product uses aggregated data
-          and does not use analytics cookies. We do not send provider keys or
-          mission exports as analytics events. See{' '}
+          and does not use analytics cookies. The application does not include
+          provider API keys or mission exports in analytics events. See{' '}
           <a href="https://vercel.com/docs/analytics/privacy-policy">Vercel’s Web Analytics privacy information</a>.
         </p>
 
-        <h2>Questions</h2>
+        <h2>Privacy contact</h2>
         <p>
-          For privacy questions, contact{' '}
+          The maintainer, Mahmood Khordoo, is responsible for privacy matters
+          relating to this hosted demonstration. Privacy questions, access
+          requests, or requests concerning personal information can be sent to{' '}
           <a href="mailto:m.khordoo@gmail.com">m.khordoo@gmail.com</a>.
         </p>
         <p>
-          Also see the <a href="/terms">Terms of Use</a>.
+          Also see the <Link href="/terms">Terms of Use</Link>.
         </p>
       </article>
     </main>
