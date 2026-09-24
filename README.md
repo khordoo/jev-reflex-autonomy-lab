@@ -103,16 +103,6 @@ npm run build
 
 The Jev adapter prefers `POST https://api.typesafe.ai/v1/systemone` with `jev-latest`. Without a direct TypeSafe key, it calls `POST https://openrouter.ai/api/alpha/decisions` with `typesafe/jev-1.13`. Both routes use the same typed choice over the available flight actions. The System 2 planner uses OpenRouter's chat completions API with strict structured output. Server errors, rate limits, and context-size failures can retry through the configured fallback model.
 
-### Save credentials in this browser
-
-The Settings dialog can save personal OpenRouter and optional TypeSafe keys in an encrypted, `HttpOnly`, `Secure` (on HTTPS), `SameSite=Strict` cookie. The server decrypts the keys only when making provider requests. By default the cookie expires after one hour; **Remember for 7 days** extends it to seven days. Removing credentials from the dialog clears the cookie; revoke a key with its provider as well if you need to invalidate it.
-
-Visitors with a saved OpenRouter key can choose their own System 2 model in Settings. The default is `z-ai/glm-5.3` (or the server's `OPENROUTER_MODEL` setting). The model choice is saved in the same encrypted browser cookie and applies to subsequent planner requests. Choose an OpenRouter model that supports structured output; availability and pricing depend on the provider.
-
-Set `CREDENTIALS_ENCRYPTION_KEY` to a private random value of at least 32 characters in the server environment. For local development, generate one with `openssl rand -base64 32` and put it in `.dev.vars`. On a production deployment, add it as a server-only secret. User-saved credentials work without a database.
-
-Server-configured provider keys remain available as a local development fallback. In production, they are disabled for visitors unless `ALLOW_SHARED_API_KEYS=true` is explicitly set. Enable that only when you intend visitors to use the deployment's shared provider account and credits.
-
 ## Experiment workflow
 
 1. Choose the fleet size and scenario.
@@ -163,3 +153,11 @@ CREDENTIALS_ENCRYPTION_KEY=<a private random value of at least 32 characters>
 Generate a value with `openssl rand -base64 32`. Do not prefix it with `NEXT_PUBLIC_` or `VITE_`. Visitors provide their own OpenRouter or TypeSafe keys in the Settings dialog; the deployment does not need provider keys. `ALLOW_SHARED_API_KEYS` stays unset so visitors cannot use deployment provider credits. Local `.dev.vars` files are ignored and are not part of the deployment.
 
 To collect page-view statistics, enable **Web Analytics** for the Vercel project in its dashboard. The app includes `@vercel/analytics`; enabling the service and deploying this branch makes the analytics endpoint available. The site discloses this in its [Privacy Notice](app/privacy/page.tsx). Visitors must agree to the [Terms of Use](app/terms/page.tsx) when saving a new provider key.
+
+### Save credentials in this browser
+
+The Settings dialog can save personal OpenRouter and optional TypeSafe keys in an encrypted, `HttpOnly`, `Secure` (on HTTPS), `SameSite=Strict` cookie. The server decrypts the keys only when making provider requests. By default the cookie expires after one hour; **Remember for 7 days** extends it to seven days. Removing credentials from the dialog clears the cookie; revoke a key with its provider as well if you need to invalidate it.
+
+Visitors with a saved OpenRouter key can choose their own System 2 model in Settings. The default is `z-ai/glm-5.3` (or the server's `OPENROUTER_MODEL` setting). The model choice is saved in the same encrypted browser cookie and applies to subsequent planner requests. Choose an OpenRouter model that supports structured output; availability and pricing depend on the provider.
+
+User-saved credentials work without a database. The Settings dialog never displays or edits keys from `.dev.vars` or other server environment variables, and saving a model there does not change `OPENROUTER_MODEL` in those files. It shows the effective model name, but saving a custom model requires an OpenRouter key saved in this browser; the model override is stored in the same cookie. When a browser cookie contains a saved provider key, that cookie's keys take priority as a set over server-configured provider keys. Otherwise, local development can use the server-configured keys. In production, server-configured provider keys are disabled for visitors unless `ALLOW_SHARED_API_KEYS=true` is explicitly set. Enable that only when you intend visitors to use the deployment's shared provider account and credits.
