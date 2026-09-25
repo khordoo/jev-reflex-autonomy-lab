@@ -537,11 +537,12 @@ test('confidence chart uses returned confidence and leaves gaps for provider fai
   assert.deepEqual(confidenceSeries([], [], 'D_01'), []);
   c.dispose();
 });
-test('confidence chart changes color only while System 2 is actively planning', () => {
-  const event = (time: number) =>
+test('confidence chart changes color only for decisions using System 2 guidance', () => {
+  const event = (time: number, guidanceRevision?: number) =>
     ({
       simulationTime: time,
       agentId: 'D_01',
+      guidanceRevision,
       decision: { confidence: 0.5, action: 'HOLD' },
       threshold: 0.3,
       observation: { detections: [] },
@@ -560,7 +561,7 @@ test('confidence chart changes color only while System 2 is actively planning', 
     },
   ] as PlanningEvent[];
   const data = confidenceSeries(
-    [event(1), event(3), event(5)],
+    [event(1), event(3), event(5, 1)],
     [],
     'D_01',
     plans,
@@ -568,9 +569,12 @@ test('confidence chart changes color only while System 2 is actively planning', 
   );
   assert.equal(data[0].system1Confidence, 50);
   assert.equal(data[0].planningConfidence, null);
-  assert.equal(data[1].system1Confidence, null);
-  assert.equal(data[1].planningConfidence, 50);
-  assert.equal(data[2].system1Confidence, 50);
+  assert.equal(data[1].plannerActive, true);
+  assert.equal(data[1].system1Confidence, 50);
+  assert.equal(data[1].planningConfidence, null);
+  assert.equal(data[2].plannerActive, false);
+  assert.equal(data[2].system1Confidence, null);
+  assert.equal(data[2].planningConfidence, 50);
 });
 test('latency chart separates Jev milliseconds from planner wall time', () => {
   const event = {
@@ -668,7 +672,9 @@ function planningFixture(): PlanningContext {
 test('OpenRouter requests the selected model and strict strategy schema, preserving agent ownership', () => {
   const context = planningFixture();
   const request = planningRequest(context, DEFAULT_PLANNER_MODEL);
-  assert.equal(request.model, 'meta/muse-spark-1.3-contributor');
+  const customRequest = planningRequest(context, 'test/custom-model');
+  assert.equal(request.model, 'z-ai/glm-5.3');
+  assert.equal(customRequest.model, 'test/custom-model');
   assert.equal(request.response_format.type, 'json_schema');
   assert.equal(request.provider.require_parameters, true);
   const content = {
@@ -771,7 +777,7 @@ test('OpenRouter missing key and HTTP failures never substitute a mock strategy'
     signal = new AbortController().signal;
   await assert.rejects(
     callPlanner(context, undefined, DEFAULT_PLANNER_MODEL, signal),
-    /OPENROUTER_API_KEY/,
+    /connect an OpenRouter key in Provider settings.*No mock fallback/,
   );
   await assert.rejects(
     callPlanner(
